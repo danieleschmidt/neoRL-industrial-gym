@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  neorl-dev:
+    build: .
+    container_name: neorl-industrial-dev
+    volumes:
+      - .:/app
+      - /app/.git
+    environment:
+      - PYTHONPATH=/app/src
+      - JAX_PLATFORM_NAME=cpu
+    ports:
+      - "8888:8888"  # Jupyter
+      - "5000:5000"  # MLflow
+    command: bash
+    stdin_open: true
+    tty: true
+
+  mlflow:
+    image: python:3.8-slim
+    container_name: neorl-mlflow
+    volumes:
+      - ./mlruns:/mlruns
+    ports:
+      - "5000:5000"
+    command: >
+      bash -c "pip install mlflow &&
+               mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri /mlruns"
+
+  jupyter:
+    build: .
+    container_name: neorl-jupyter
+    volumes:
+      - .:/app
+    ports:
+      - "8888:8888"
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    command: >
+      bash -c "pip install jupyterlab &&
+               jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token=''"

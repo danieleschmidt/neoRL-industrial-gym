@@ -205,3 +205,34 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# ML/AI specific for neoRL-industrial-gym
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+models/
+checkpoints/
+tensorboard_logs/
+mlruns/
+wandb/
+.neptune/
+.aim/
+
+# JAX specific
+jax_cache/
+
+# Industrial datasets
+data/
+datasets/
+*.csv
+*.json
+*.parquet
+traces/
+factory_data/
+
+# RL specific
+replay_buffers/
+offline_datasets/
+evaluation_results/
+policy_checkpoints/
