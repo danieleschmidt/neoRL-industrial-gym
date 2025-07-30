@@ -236,3 +236,73 @@ replay_buffers/
 offline_datasets/
 evaluation_results/
 policy_checkpoints/
+
+# Security-sensitive files (enhanced patterns)
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+*.keystore
+config.json
+secrets.json
+.secrets/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+auth.json
+credentials.json
+service-account*.json
+.aws/
+.azure/
+.gcp/
+
+# Industrial/Factory security
+factory_configs/
+plc_configs/
+scada_data/
+*.cfg
+*.ini
+connection_strings.txt
+database.db
+*.sqlite
+
+# Temporary and backup files
+*.bak
+*.backup
+*.orig
+*.rej
+*.tmp
+*.temp
+*~
+.#*
+#*#
+
+# IDE and editor files
+.idea/
+.vscode/settings.json
+.vscode/launch.json
+*.swp
+*.swo
+*~
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Container and orchestration
+.dockerignore
+docker-compose.override.yml
+.env.docker
+.env.k8s
+*.kubeconfig
+.terraform/
+*.tfstate
+*.tfstate.*
