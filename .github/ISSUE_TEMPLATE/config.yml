@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🔒 Security Vulnerability Report
+    url: mailto:security@terragon.ai
+    about: Report security vulnerabilities privately
+  - name: 💬 General Questions & Discussion
+    url: https://github.com/terragon-labs/neoRL-industrial-gym/discussions
+    about: Ask questions and discuss with the community
+  - name: 📚 Documentation
+    url: https://neorl-industrial.readthedocs.io
+    about: Check the documentation for answers
+  - name: 🏭 Industrial Deployment Support
+    url: mailto:support@terragon.ai
+    about: Get help with industrial deployment and safety validation

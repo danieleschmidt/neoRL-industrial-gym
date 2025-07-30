@@ -1,0 +1,152 @@
+name: Safety Issue
+description: Report a safety-related concern or vulnerability
+title: "[SAFETY] Brief description"
+labels: ["safety", "security", "urgent"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ⚠️ **IMPORTANT**: If this is a critical safety vulnerability that could affect production systems, 
+        please contact us privately at security@terragon.ai instead of filing a public issue.
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Prerequisites
+      description: Please confirm the following
+      options:
+        - label: This is not a critical vulnerability affecting production systems
+          required: true
+        - label: I have reviewed the safety documentation
+          required: true
+
+  - type: dropdown
+    id: safety_type
+    attributes:
+      label: Safety Issue Type
+      description: What type of safety issue is this? 
+      options:
+        - Constraint Violation (safety limits not enforced)
+        - Emergency Shutdown Failure
+        - Safety Monitoring Gap
+        - Unsafe Default Configuration
+        - Missing Safety Documentation
+        - Industrial Standards Compliance
+        - Other Safety Concern
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity Level
+      description: How severe is this safety issue?
+      options:
+        - Low (minor safety improvement)
+        - Medium (potential safety risk with mitigation)
+        - High (serious safety risk)
+        - Critical (immediate safety hazard)
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Safety Issue Description
+      description: Detailed description of the safety concern
+      placeholder: |
+        Describe the safety issue, including:
+        - What safety mechanism is affected
+        - Under what conditions the issue occurs
+        - Potential consequences
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment_affected
+    attributes:
+      label: Affected Environments/Scenarios
+      description: Which industrial environments or scenarios are affected?
+      placeholder: |
+        List affected environments (e.g., ChemicalReactor-v0, RobotAssembly-v0, etc.)
+        and describe the industrial scenarios where this could be problematic...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce Safety Issue
+      description: How to reproduce this safety issue
+      placeholder: |
+        1. Set up environment with...
+        2. Configure safety constraints...
+        3. Execute action sequence...
+        4. Observe safety violation...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: Expected Safety Behavior
+      description: What should happen to maintain safety?
+      placeholder: Describe the expected safe behavior...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual_behavior
+    attributes:
+      label: Actual Unsafe Behavior
+      description: What actually happens that creates the safety concern?
+      placeholder: Describe the unsafe behavior observed...
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact_assessment
+    attributes:
+      label: Impact Assessment
+      description: Assess the potential impact if this issue occurs in a real industrial setting
+      placeholder: |
+        Consider:
+        - Equipment damage potential
+        - Personnel safety risks
+        - Environmental impact
+        - Production disruption
+        - Compliance violations
+    validations:
+      required: true
+
+  - type: textarea
+    id: mitigation
+    attributes:
+      label: Suggested Mitigation
+      description: Your suggestions for addressing this safety issue
+      placeholder: Describe potential solutions or mitigations...
+
+  - type: checkboxes
+    id: standards
+    attributes:
+      label: Industrial Standards
+      description: Which industrial safety standards might be relevant?
+      options:
+        - label: IEC 61508 (Functional Safety)
+        - label: ISO 13849 (Machinery Safety)
+        - label: IEC 62061 (Safety-related electrical systems)
+        - label: ANSI/ISA-84.00.01 (Safety Instrumented Systems)
+        - label: Other standards (specify in additional context)
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any additional context, references, or safety documentation
+      placeholder: |
+        Include:
+        - References to relevant safety standards
+        - Links to industrial safety documentation
+        - Related safety incidents or concerns
+        - Screenshots or logs if helpful

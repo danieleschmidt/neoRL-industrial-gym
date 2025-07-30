@@ -1,0 +1,130 @@
+name: Feature Request
+description: Suggest a new feature for neoRL-industrial-gym
+title: "[FEATURE] Brief description"
+labels: ["enhancement", "needs-triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature! Please provide detailed information to help us understand and evaluate your request.
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Prerequisites
+      description: Please confirm the following before submitting
+      options:
+        - label: I have searched existing issues to make sure this feature hasn't been requested
+          required: true
+        - label: I have checked the documentation to ensure this feature doesn't already exist
+          required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      description: What type of feature is this?
+      options:
+        - New Environment/Simulator
+        - New RL Algorithm
+        - Safety/Monitoring Enhancement
+        - Performance Optimization
+        - Documentation Improvement
+        - Developer Experience
+        - Integration/API Enhancement
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem/Use Case
+      description: What problem does this feature solve? What's your use case?
+      placeholder: |
+        Describe the problem you're trying to solve or the use case this feature would enable...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe your proposed solution in detail
+      placeholder: |
+        Describe what you'd like to happen. Be as specific as possible about the API, behavior, etc.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Solutions
+      description: Have you considered any alternative solutions or workarounds?
+      placeholder: Describe any alternative solutions or features you've considered...
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Nice to have
+        - Important for my workflow
+        - Blocking my work
+        - Critical for production use
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: safety_considerations
+    attributes:
+      label: Safety Considerations
+      description: Does this feature involve industrial safety aspects?
+      options:
+        - label: This feature affects safety-critical systems
+        - label: This feature requires safety validation
+        - label: This feature needs compliance documentation
+        - label: No safety implications
+
+  - type: textarea
+    id: technical_details
+    attributes:
+      label: Technical Implementation Notes
+      description: Any technical details, API design ideas, or implementation suggestions
+      placeholder: |
+        Share any technical thoughts, API design ideas, or implementation details...
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Usage Examples
+      description: Provide examples of how this feature would be used
+      placeholder: |
+        ```python
+        # Example usage of the proposed feature
+        import neorl_industrial as ni
+        
+        # Your example here...
+        ```
+      render: python
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Implementation
+      description: Are you willing to help implement this feature?
+      options:
+        - label: I can implement this feature and submit a PR
+        - label: I can help with testing and validation
+        - label: I can provide domain expertise/consultation
+        - label: I need the maintainers to implement this
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any additional context, references, or related work
+      placeholder: |
+        Add any other context, references to papers, similar implementations, etc.
