@@ -1,0 +1,145 @@
+# Development Environment Configuration
+# This file contains development-specific settings for neoRL-industrial-gym
+
+environment:
+  name: development
+  debug: true
+  log_level: DEBUG
+  verbose_logging: true
+
+# MLflow configuration for development
+mlflow:
+  tracking_uri: file://./mlruns
+  experiment_name: neorl-industrial-dev
+  auto_log: true
+  log_models: true
+
+# JAX configuration for development (CPU-focused)
+jax:
+  platform: cpu
+  enable_x64: false
+  debug_nans: true
+  debug_infs: true
+  check_tracer_leaks: true
+
+# Dataset configuration for development
+datasets:
+  data_dir: ./data/dev
+  cache_dir: ./cache/dev
+  max_size_mb: 500  # Smaller datasets for faster iteration
+  download_timeout: 300
+  validation_split: 0.2
+
+# Training configuration for development
+training:
+  batch_size: 64  # Smaller batches for faster feedback
+  eval_batch_size: 256
+  max_epochs: 10  # Fewer epochs for quick testing
+  eval_frequency: 2
+  checkpoint_frequency: 5
+  early_stopping_patience: 3
+
+# Safety configuration for development
+safety:
+  monitoring_enabled: true
+  constraint_threshold: 0.15  # Slightly relaxed for testing
+  emergency_shutdown_enabled: true
+  validation_frequency: 1  # Validate every episode
+  mock_industrial_systems: true  # Use mock systems in dev
+
+# Performance monitoring for development
+monitoring:
+  interval_seconds: 30
+  memory_profiling: true
+  performance_profiling: true
+  resource_limits:
+    max_memory_gb: 4
+    max_cpu_percent: 80
+
+# Development-specific features
+development:
+  enable_experimental_features: true
+  mock_external_services: true
+  hot_reload: true
+  debug_mode: true
+  test_mode: false
+
+# Logging configuration
+logging:
+  level: DEBUG
+  format: detailed
+  file_path: ./logs/dev.log
+  max_file_size_mb: 10
+  backup_count: 3
+  console_output: true
+  structured_logging: false
+
+# Database configuration (for development)
+database:
+  url: sqlite:///./dev.db
+  echo: true  # Log all SQL queries
+  pool_size: 5
+  max_overflow: 10
+  pool_timeout: 30
+
+# API configuration (if using web interface)
+api:
+  host: localhost
+  port: 8000
+  workers: 1
+  reload: true  # Auto-reload on code changes
+  debug: true
+
+# Testing configuration
+testing:
+  run_slow_tests: false
+  mock_industrial_hardware: true
+  test_data_dir: ./data/test
+  parallel_test_workers: 2
+
+# Feature flags for development
+features:
+  advanced_safety: true
+  performance_optimizations: false  # Disable for easier debugging
+  telemetry: false
+  analytics: false
+  crash_reporting: true
+
+# Industrial simulation settings (development)
+industrial:
+  simulation_mode: true
+  mock_plc: true
+  mock_scada: true
+  realistic_delays: false  # Faster simulation for development
+  fault_injection: true  # Enable fault testing
+
+# Environment-specific paths
+paths:
+  data: ./data/dev
+  logs: ./logs/dev
+  cache: ./cache/dev
+  models: ./models/dev
+  checkpoints: ./checkpoints/dev
+  exports: ./exports/dev
+
+# Resource limits for development
+resources:
+  max_parallel_envs: 2
+  max_memory_per_env_mb: 256
+  max_cpu_per_env_percent: 25
+  disk_space_warning_gb: 1
+
+# Security settings for development
+security:
+  auth_required: false
+  ssl_enabled: false
+  cors_enabled: true
+  csrf_protection: false
+  rate_limiting: false
+
+# Compliance settings (relaxed for development)
+compliance:
+  audit_logging: false
+  data_encryption: false
+  pii_protection: false
+  retention_days: 7  # Short retention for development

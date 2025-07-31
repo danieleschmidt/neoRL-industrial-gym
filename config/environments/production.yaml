@@ -1,0 +1,224 @@
+# Production Environment Configuration
+# This file contains production-specific settings for neoRL-industrial-gym
+# CRITICAL: Review all settings carefully before deployment
+
+environment:
+  name: production
+  debug: false
+  log_level: INFO
+  verbose_logging: false
+
+# MLflow configuration for production
+mlflow:
+  tracking_uri: ${MLFLOW_TRACKING_URI}  # Set via environment variable
+  experiment_name: neorl-industrial-prod
+  auto_log: false  # Disabled for performance
+  log_models: true
+  model_registry_uri: ${MLFLOW_REGISTRY_URI}
+
+# JAX configuration for production
+jax:
+  platform: ${JAX_PLATFORM_NAME:-cpu}
+  enable_x64: true  # Higher precision for production
+  debug_nans: false
+  debug_infs: false
+  check_tracer_leaks: false
+  memory_fraction: 0.9  # Use most available memory
+
+# Dataset configuration for production
+datasets:
+  data_dir: ${DATA_DIR:-/data/neorl}
+  cache_dir: ${CACHE_DIR:-/cache/neorl}
+  max_size_mb: 4000  # Larger datasets for production
+  download_timeout: 1800  # 30 minutes for large datasets
+  validation_split: 0.1
+  prefetch_buffer: 20
+
+# Training configuration for production
+training:
+  batch_size: ${BATCH_SIZE:-512}
+  eval_batch_size: ${EVAL_BATCH_SIZE:-2048}
+  max_epochs: 1000
+  eval_frequency: 10
+  checkpoint_frequency: 100
+  early_stopping_patience: 50
+  gradient_clipping: 1.0
+
+# Safety configuration for production (CRITICAL)
+safety:
+  monitoring_enabled: true
+  constraint_threshold: ${SAFETY_CONSTRAINT_THRESHOLD:-0.05}  # Strict safety
+  emergency_shutdown_enabled: true
+  validation_frequency: 1  # Validate every episode
+  mock_industrial_systems: false  # Use real systems
+  safety_buffer_size: 1000
+  anomaly_detection_enabled: true
+
+# Performance monitoring for production
+monitoring:
+  interval_seconds: 60
+  memory_profiling: false  # Disabled for performance
+  performance_profiling: false
+  metrics_retention_days: 90
+  alerting_enabled: true
+  resource_limits:
+    max_memory_gb: ${MAX_MEMORY_USAGE_GB:-32}
+    max_cpu_percent: 90
+
+# Production-specific features
+production:
+  enable_experimental_features: false
+  mock_external_services: false
+  hot_reload: false
+  debug_mode: false
+  test_mode: false
+  graceful_shutdown_timeout: 30
+
+# Logging configuration for production
+logging:
+  level: INFO
+  format: json  # Structured logging for production
+  file_path: /var/log/neorl/production.log
+  max_file_size_mb: 100
+  backup_count: 10
+  console_output: false
+  structured_logging: true
+  remote_logging_enabled: true
+
+# Database configuration for production
+database:
+  url: ${DATABASE_URL}  # Set via environment variable
+  echo: false  # No SQL query logging in production
+  pool_size: 20
+  max_overflow: 30
+  pool_timeout: 60
+  connection_retry_attempts: 3
+
+# API configuration for production
+api:
+  host: ${API_HOST:-0.0.0.0}
+  port: ${API_PORT:-8000}
+  workers: ${API_WORKERS:-8}
+  reload: false
+  debug: false
+  timeout: 300
+  max_request_size: 100  # MB
+
+# High availability configuration
+high_availability:
+  health_check_enabled: true
+  health_check_interval: 30
+  graceful_shutdown: true
+  zero_downtime_deployment: true
+  load_balancing: true
+
+# Feature flags for production
+features:
+  advanced_safety: true
+  performance_optimizations: true
+  telemetry: ${ENABLE_TELEMETRY:-false}
+  analytics: true
+  crash_reporting: true
+  feature_toggles_enabled: true
+
+# Industrial system settings (production - SENSITIVE)
+industrial:
+  simulation_mode: false  # Use real industrial systems
+  mock_plc: false
+  mock_scada: false
+  realistic_delays: true
+  fault_injection: false  # Disabled in production
+  connection_timeout: 10
+  retry_attempts: 3
+  heartbeat_interval: 5
+
+# Production paths (mounted volumes)
+paths:
+  data: /data/neorl
+  logs: /var/log/neorl
+  cache: /cache/neorl
+  models: /models/neorl
+  checkpoints: /checkpoints/neorl
+  exports: /exports/neorl
+  backup: /backup/neorl
+
+# Resource limits for production
+resources:
+  max_parallel_envs: ${N_PARALLEL_ENVS:-16}
+  max_memory_per_env_mb: 1024
+  max_cpu_per_env_percent: 50
+  disk_space_warning_gb: 10
+  disk_space_critical_gb: 5
+
+# Security settings for production (CRITICAL)
+security:
+  auth_required: true
+  ssl_enabled: true
+  cors_enabled: false
+  csrf_protection: true
+  rate_limiting: true
+  max_requests_per_minute: 1000
+  jwt_expiry_hours: 24
+  password_policy_enabled: true
+  two_factor_required: true
+
+# Compliance settings for production (STRICT)
+compliance:
+  audit_logging: true
+  data_encryption: true
+  pii_protection: true
+  retention_days: ${DATA_RETENTION_DAYS:-365}
+  gdpr_compliance: true
+  export_compliance: true
+  audit_trail_retention_years: 7
+
+# Backup and disaster recovery
+backup:
+  enabled: true
+  frequency: daily
+  retention_days: 30
+  remote_backup: true
+  encryption_enabled: true
+  verification_enabled: true
+
+# Alerting configuration
+alerting:
+  enabled: true
+  email_notifications: true
+  slack_notifications: true
+  pagerduty_integration: true
+  alert_escalation_minutes: 15
+  
+  # Alert thresholds
+  thresholds:
+    memory_usage_percent: 85
+    cpu_usage_percent: 90
+    disk_usage_percent: 80
+    error_rate_percent: 5
+    response_time_ms: 1000
+
+# Performance optimization
+performance:
+  enable_caching: true
+  cache_ttl_seconds: 3600
+  enable_compression: true
+  enable_pooling: true
+  batch_processing: true
+  async_processing: true
+
+# Network configuration
+network:
+  timeout_seconds: 30
+  max_connections: 1000
+  keepalive_enabled: true
+  compression_enabled: true
+  proxy_support: true
+
+# Scaling configuration
+scaling:
+  auto_scaling_enabled: true
+  min_instances: 2
+  max_instances: 10
+  scale_up_threshold: 80  # CPU %
+  scale_down_threshold: 30  # CPU %
+  cooldown_minutes: 5
