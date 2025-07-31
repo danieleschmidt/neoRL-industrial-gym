@@ -17,10 +17,15 @@ test-cov:
 
 # Code quality
 lint:
-	flake8 src/ tests/
+	ruff check src/ tests/
+	flake8 src/ tests/  # Keeping flake8 for compatibility
+
+lint-fix:
+	ruff check --fix src/ tests/
 
 format:
-	black src/ tests/
+	ruff format src/ tests/
+	black src/ tests/  # Keeping black for compatibility
 	isort src/ tests/
 
 type-check:
@@ -44,6 +49,9 @@ docs:
 # All quality checks
 check-all: lint type-check test
 
+# Modern quality checks with ruff
+check-modern: lint-fix format type-check test
+
 # Build package
 build:
 	python -m build
@@ -51,3 +59,24 @@ build:
 # Safety validation
 validate-safety:
 	python scripts/validate_safety.py --env all
+
+# Security scanning
+security-scan:
+	python scripts/security_scan.py --output security-report.json
+
+security-scan-strict:
+	python scripts/security_scan.py --output security-report.json --fail-on-vuln
+
+# Container security
+container-security:
+	python scripts/container_security.py --output container-security-report.json
+
+container-security-quick:
+	python scripts/container_security.py --skip-build --output container-security-report.json
+
+# Configuration validation
+validate-config:
+	python scripts/validate_config.py
+
+# Comprehensive validation
+validate-all: validate-config validate-safety security-scan

@@ -1,0 +1,54 @@
+# CODEOWNERS file for neoRL-industrial-gym
+# This file defines code ownership and review requirements
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global ownership - Daniel Schmidt as primary maintainer
+* @danieleschmidt
+
+# Core source code - requires specialized RL knowledge
+/src/neorl_industrial/ @danieleschmidt
+
+# Safety-critical components - requires additional safety review
+/src/neorl_industrial/safety/ @danieleschmidt
+/scripts/validate_safety.py @danieleschmidt
+
+# Security-sensitive files - requires security review
+/scripts/security_scan.py @danieleschmidt
+/scripts/container_security.py @danieleschmidt
+/.github/dependabot.yml @danieleschmidt
+/SECURITY.md @danieleschmidt
+
+# Infrastructure and CI/CD - requires DevOps expertise
+/.github/workflows/ @danieleschmidt
+/Dockerfile @danieleschmidt
+/docker-compose.yml @danieleschmidt
+/.dockerignore @danieleschmidt
+
+# Configuration files - requires careful review
+/pyproject.toml @danieleschmidt
+/requirements*.txt @danieleschmidt
+/.pre-commit-config.yaml @danieleschmidt
+/Makefile @danieleschmidt
+
+# Documentation - can be reviewed by documentation team
+/docs/ @danieleschmidt
+/README.md @danieleschmidt
+/CHANGELOG.md @danieleschmidt
+
+# Testing infrastructure - requires testing expertise
+/tests/ @danieleschmidt
+/scripts/benchmark_suite.py @danieleschmidt
+
+# Release and packaging - requires release management
+/setup.py @danieleschmidt
+/MANIFEST.in @danieleschmidt
+
+# Legal and compliance
+/LICENSE @danieleschmidt
+/CODE_OF_CONDUCT.md @danieleschmidt
+/CONTRIBUTING.md @danieleschmidt
+
+# Industrial/Factory specific code - requires domain expertise
+# (Add domain experts when team grows)
+# /src/neorl_industrial/envs/factory/ @danieleschmidt @factory-expert
+# /src/neorl_industrial/envs/industrial/ @danieleschmidt @industrial-expert

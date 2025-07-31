@@ -1,0 +1,204 @@
+# Testing Environment Configuration
+# This file contains test-specific settings for neoRL-industrial-gym
+
+environment:
+  name: testing
+  debug: true
+  log_level: WARNING  # Reduce noise in test output
+  verbose_logging: false
+
+# MLflow configuration for testing
+mlflow:
+  tracking_uri: file://./test_mlruns
+  experiment_name: neorl-industrial-test
+  auto_log: false  # Disabled for faster tests
+  log_models: false
+
+# JAX configuration for testing (optimized for speed)
+jax:
+  platform: cpu  # Always use CPU for consistent testing
+  enable_x64: false  # Faster with lower precision
+  debug_nans: false
+  debug_infs: false
+  check_tracer_leaks: false
+
+# Dataset configuration for testing
+datasets:
+  data_dir: ./test_data
+  cache_dir: ./test_cache
+  max_size_mb: 100  # Small datasets for fast tests
+  download_timeout: 60
+  validation_split: 0.1
+  use_synthetic_data: true  # Generate synthetic data for tests
+
+# Training configuration for testing
+training:
+  batch_size: 32  # Small batches for speed
+  eval_batch_size: 64
+  max_epochs: 2  # Minimal training for tests
+  eval_frequency: 1
+  checkpoint_frequency: 1
+  early_stopping_patience: 1
+
+# Safety configuration for testing
+safety:
+  monitoring_enabled: true
+  constraint_threshold: 0.2  # Relaxed for testing
+  emergency_shutdown_enabled: true
+  validation_frequency: 1
+  mock_industrial_systems: true  # Always use mocks in tests
+  fault_injection_enabled: true  # Test fault scenarios
+
+# Performance monitoring for testing
+monitoring:
+  interval_seconds: 5  # Frequent for test verification
+  memory_profiling: false
+  performance_profiling: false
+  resource_limits:
+    max_memory_gb: 2
+    max_cpu_percent: 50
+
+# Testing-specific features
+testing:
+  enable_experimental_features: true  # Test all features
+  mock_external_services: true
+  hot_reload: false
+  debug_mode: true
+  test_mode: true
+  deterministic_seed: 42  # For reproducible tests
+  parallel_testing: true
+
+# Logging configuration for testing
+logging:
+  level: WARNING
+  format: simple
+  file_path: ./test_logs/test.log
+  max_file_size_mb: 10
+  backup_count: 1
+  console_output: true
+  structured_logging: false
+
+# Database configuration for testing
+database:
+  url: sqlite:///./test.db
+  echo: false  # No SQL logging during tests
+  pool_size: 1
+  max_overflow: 0
+  pool_timeout: 5
+
+# API configuration for testing
+api:
+  host: localhost
+  port: 8001  # Different port to avoid conflicts
+  workers: 1
+  reload: false
+  debug: false
+  testing_client: true
+
+# Test execution configuration
+test_execution:
+  run_slow_tests: false
+  run_integration_tests: true
+  run_performance_tests: false
+  run_safety_tests: true
+  parallel_workers: 2
+  timeout_seconds: 300
+
+# Feature flags for testing
+features:
+  advanced_safety: true
+  performance_optimizations: false  # Disable for predictable behavior
+  telemetry: false
+  analytics: false
+  crash_reporting: false
+
+# Industrial simulation settings for testing
+industrial:
+  simulation_mode: true
+  mock_plc: true
+  mock_scada: true
+  realistic_delays: false  # Fast simulation for tests
+  fault_injection: true
+  deterministic_behavior: true
+
+# Testing paths
+paths:
+  data: ./test_data
+  logs: ./test_logs
+  cache: ./test_cache
+  models: ./test_models
+  checkpoints: ./test_checkpoints
+  exports: ./test_exports
+
+# Resource limits for testing
+resources:
+  max_parallel_envs: 2
+  max_memory_per_env_mb: 128
+  max_cpu_per_env_percent: 25
+  disk_space_warning_gb: 0.5
+
+# Security settings for testing
+security:
+  auth_required: false
+  ssl_enabled: false
+  cors_enabled: true
+  csrf_protection: false
+  rate_limiting: false
+
+# Compliance settings for testing
+compliance:
+  audit_logging: false
+  data_encryption: false
+  pii_protection: false
+  retention_days: 1  # Minimal retention for tests
+
+# Test data configuration
+test_data:
+  synthetic_datasets: true
+  dataset_sizes:
+    small: 1000
+    medium: 10000
+    large: 100000
+  noise_levels: [0.0, 0.1, 0.2]
+  missing_data_rates: [0.0, 0.05, 0.1]
+
+# Mock configuration
+mocks:
+  external_apis: true
+  database_connections: false  # Use real test DB
+  file_system: false
+  network_calls: true
+  hardware_interfaces: true
+
+# Test coverage configuration
+coverage:
+  minimum_coverage: 80
+  fail_under: 75
+  exclude_files:
+    - "*/tests/*"
+    - "*/test_*"
+    - "*/conftest.py"
+  report_formats: ["html", "xml", "term"]
+
+# Benchmark configuration for performance tests
+benchmarks:
+  enabled: false  # Disabled by default in testing
+  baseline_file: ./benchmarks/baseline.json
+  performance_regression_threshold: 1.2  # 20% slower fails
+  memory_regression_threshold: 1.1  # 10% more memory fails
+
+# Error injection for testing
+error_injection:
+  enabled: true
+  failure_rate: 0.1  # 10% of calls fail
+  timeout_rate: 0.05  # 5% of calls timeout
+  network_errors: true
+  disk_errors: true
+  memory_errors: false  # Disabled to prevent test crashes
+
+# Cleanup configuration
+cleanup:
+  auto_cleanup: true
+  cleanup_on_failure: true
+  preserve_artifacts: false
+  temp_file_retention_hours: 1
