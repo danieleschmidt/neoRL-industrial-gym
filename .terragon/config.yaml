@@ -1,0 +1,60 @@
+scoring:
+  weights:
+    advanced:
+      wsjf: 0.5
+      ice: 0.1
+      technicalDebt: 0.3
+      security: 0.1
+  
+  thresholds:
+    minScore: 15
+    maxRisk: 0.7
+    securityBoost: 2.0
+    complianceBoost: 1.8
+
+discovery:
+  sources:
+    - gitHistory
+    - staticAnalysis
+    - issueTrackers
+    - vulnerabilityDatabases
+    - performanceMonitoring
+    - codeMetrics
+  
+  tools:
+    staticAnalysis:
+      - ruff
+      - mypy
+      - bandit
+    security:
+      - safety
+      - trivy
+      - semgrep
+    performance:
+      - pytest-benchmark
+      - memory-profiler
+
+execution:
+  maxConcurrentTasks: 1
+  testRequirements:
+    minCoverage: 90
+    performanceRegression: 3
+  rollbackTriggers:
+    - testFailure
+    - buildFailure
+    - securityViolation
+    - lintFailure
+
+automation:
+  enabled: true
+  schedule:
+    immediate: "on_pr_merge"
+    hourly: "security_scan"
+    daily: "comprehensive_analysis"
+    weekly: "deep_review"
+    monthly: "strategic_review"
+  
+  notifications:
+    slack: false
+    email: false
+    github: true
