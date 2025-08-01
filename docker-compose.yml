@@ -1,42 +1,276 @@
 version: '3.8'
 
 services:
+  # ================================
+  # Development Environment
+  # ================================
   neorl-dev:
-    build: .
+    build:
+      context: .
+      target: development
+      dockerfile: Dockerfile
     container_name: neorl-industrial-dev
     volumes:
       - .:/app
-      - /app/.git
+      - neorl-cache:/home/neorl/.cache
+      - mlflow-data:/app/mlruns
     environment:
       - PYTHONPATH=/app/src
       - JAX_PLATFORM_NAME=cpu
+      - NEORL_DEV_MODE=true
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - NEORL_DATA_ROOT=/app/data
     ports:
-      - "8888:8888"  # Jupyter
-      - "5000:5000"  # MLflow
-    command: bash
+      - "8888:8888"  # Jupyter Lab
+      - "8080:8080"  # Development server
+    networks:
+      - neorl-network
+    depends_on:
+      - mlflow
+      - postgres
+    command: >
+      bash -c "
+        echo 'Starting neoRL development environment...' &&
+        jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' &
+        tail -f /dev/null
+      "
     stdin_open: true
     tty: true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import neorl_industrial; print('OK')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
+  # ================================
+  # Production Environment
+  # ================================
+  neorl-prod:
+    build:
+      context: .
+      target: production
+      dockerfile: Dockerfile
+    container_name: neorl-industrial-prod
+    volumes:
+      - mlflow-data:/app/mlruns
+      - model-artifacts:/app/models
+    environment:
+      - PYTHONPATH=/app/src
+      - JAX_PLATFORM_NAME=cpu
+      - NEORL_DEV_MODE=false
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    ports:
+      - "8000:8000"  # Production API
+    networks:
+      - neorl-network
+    depends_on:
+      - mlflow
+      - postgres
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import neorl_industrial; print('OK')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ================================
+  # GPU Environment
+  # ================================
+  neorl-gpu:
+    build:
+      context: .
+      target: gpu
+      dockerfile: Dockerfile
+    container_name: neorl-industrial-gpu
+    volumes:
+      - mlflow-data:/app/mlruns
+      - model-artifacts:/app/models
+      - gpu-cache:/home/neorl/.cache
+    environment:
+      - PYTHONPATH=/app/src
+      - JAX_PLATFORM_NAME=gpu
+      - XLA_PYTHON_CLIENT_PREALLOCATE=false
+      - XLA_PYTHON_CLIENT_MEM_FRACTION=0.8
+      - CUDA_VISIBLE_DEVICES=0
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    ports:
+      - "8001:8000"  # GPU training API
+    networks:
+      - neorl-network
+    depends_on:
+      - mlflow
+      - postgres
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    restart: unless-stopped
+    profiles:
+      - gpu
+
+  # ================================
+  # MLflow Tracking Server
+  # ================================
   mlflow:
-    image: python:3.8-slim
+    image: python:3.10-slim
     container_name: neorl-mlflow
     volumes:
-      - ./mlruns:/mlruns
+      - mlflow-data:/mlflow
+    environment:
+      - MLFLOW_BACKEND_STORE_URI=postgresql://mlflow:mlflow@postgres:5432/mlflow
+      - MLFLOW_DEFAULT_ARTIFACT_ROOT=/mlflow/artifacts
     ports:
       - "5000:5000"
+    networks:
+      - neorl-network
+    depends_on:
+      - postgres
     command: >
-      bash -c "pip install mlflow &&
-               mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri /mlruns"
+      bash -c "
+        pip install mlflow psycopg2-binary &&
+        mlflow server 
+          --host 0.0.0.0 
+          --port 5000 
+          --backend-store-uri postgresql://mlflow:mlflow@postgres:5432/mlflow 
+          --default-artifact-root /mlflow/artifacts
+      "
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
 
+  # ================================
+  # PostgreSQL Database
+  # ================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: neorl-postgres
+    environment:
+      - POSTGRES_DB=mlflow
+      - POSTGRES_USER=mlflow
+      - POSTGRES_PASSWORD=mlflow
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - neorl-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mlflow"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # ================================
+  # Jupyter Lab (Standalone)
+  # ================================
   jupyter:
-    build: .
+    build:
+      context: .
+      target: development
+      dockerfile: Dockerfile
     container_name: neorl-jupyter
     volumes:
       - .:/app
-    ports:
-      - "8888:8888"
+      - jupyter-data:/home/neorl/.jupyter
+      - neorl-cache:/home/neorl/.cache
     environment:
+      - PYTHONPATH=/app/src
+      - JAX_PLATFORM_NAME=cpu
       - JUPYTER_ENABLE_LAB=yes
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    ports:
+      - "8889:8888"  # Alternative Jupyter port
+    networks:
+      - neorl-network
+    depends_on:
+      - mlflow
     command: >
-      bash -c "pip install jupyterlab &&
-               jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token=''"
+      bash -c "
+        pip install jupyterlab jupyter-mlflow &&
+        jupyter lab 
+          --ip=0.0.0.0 
+          --port=8888 
+          --no-browser 
+          --allow-root 
+          --NotebookApp.token='' 
+          --ServerApp.allow_origin='*'
+      "
+    profiles:
+      - jupyter
+
+  # ================================
+  # Prometheus Monitoring
+  # ================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: neorl-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    networks:
+      - neorl-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    profiles:
+      - monitoring
+
+  # ================================
+  # Grafana Dashboard
+  # ================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: neorl-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - neorl-network
+    depends_on:
+      - prometheus
+    profiles:
+      - monitoring
+
+# ================================
+# Networks
+# ================================
+networks:
+  neorl-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# ================================
+# Volumes
+# ================================
+volumes:
+  mlflow-data:
+    driver: local
+  postgres-data:
+    driver: local
+  model-artifacts:
+    driver: local
+  jupyter-data:
+    driver: local
+  neorl-cache:
+    driver: local
+  gpu-cache:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
