@@ -1,0 +1,40 @@
+# Global code ownership for neoRL-industrial-gym
+
+# Default owners for everything in the repository
+* @danieleschmidt @terragon-labs/core-team
+
+# Documentation
+docs/ @danieleschmidt @terragon-labs/documentation-team
+*.md @danieleschmidt @terragon-labs/documentation-team
+CHANGELOG.md @danieleschmidt @terragon-labs/release-team
+
+# Configuration files
+pyproject.toml @danieleschmidt @terragon-labs/core-team
+requirements*.txt @danieleschmidt @terragon-labs/core-team
+Dockerfile @danieleschmidt @terragon-labs/devops-team
+docker-compose*.yml @danieleschmidt @terragon-labs/devops-team
+.github/ @danieleschmidt @terragon-labs/devops-team
+
+# Source code
+src/ @danieleschmidt @terragon-labs/core-team
+src/neorl_industrial/safety/ @danieleschmidt @terragon-labs/safety-team
+src/neorl_industrial/environments/ @danieleschmidt @terragon-labs/environment-team
+src/neorl_industrial/agents/ @danieleschmidt @terragon-labs/algorithms-team
+
+# Tests
+tests/ @danieleschmidt @terragon-labs/core-team
+tests/unit/test_safety* @danieleschmidt @terragon-labs/safety-team
+tests/performance/ @danieleschmidt @terragon-labs/performance-team
+tests/e2e/ @danieleschmidt @terragon-labs/qa-team
+
+# Scripts and automation
+scripts/ @danieleschmidt @terragon-labs/devops-team
+scripts/validate_safety.py @danieleschmidt @terragon-labs/safety-team
+scripts/security_scan.py @danieleschmidt @terragon-labs/security-team
+
+# Monitoring and observability
+monitoring/ @danieleschmidt @terragon-labs/devops-team @terragon-labs/sre-team
+
+# Security-related files
+SECURITY.md @danieleschmidt @terragon-labs/security-team
+.pre-commit-config.yaml @danieleschmidt @terragon-labs/security-team

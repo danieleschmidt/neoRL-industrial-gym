@@ -1,0 +1,251 @@
+# Alertmanager configuration for neoRL-industrial-gym
+
+global:
+  # SMTP configuration for email alerts
+  smtp_smarthost: 'localhost:587'
+  smtp_from: 'alerts@neorl-industrial.com'
+  smtp_auth_username: 'alerts@neorl-industrial.com'
+  smtp_auth_password: 'your-smtp-password'
+  
+  # Slack configuration
+  slack_api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+
+# Templates for alert formatting
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Alert routing tree
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 12h
+  receiver: 'default-receiver'
+  
+  routes:
+    # Critical safety alerts - immediate notification
+    - match:
+        category: safety
+        severity: critical
+      receiver: 'safety-critical'
+      group_wait: 0s
+      group_interval: 0s
+      repeat_interval: 5m
+      continue: true  # Also send to default channels
+      
+    # Performance critical alerts
+    - match:
+        category: performance
+        severity: critical
+      receiver: 'performance-critical'
+      group_wait: 30s
+      group_interval: 2m
+      repeat_interval: 1h
+      
+    # General warnings during business hours
+    - match:
+        severity: warning
+      receiver: 'business-hours-warnings'
+      active_time_intervals:
+        - business_hours
+      group_wait: 5m
+      group_interval: 10m
+      repeat_interval: 24h
+      
+    # Off-hours critical alerts only
+    - match:
+        severity: critical
+      receiver: 'after-hours-critical'
+      active_time_intervals:
+        - after_hours
+      group_wait: 1m
+      group_interval: 5m
+      repeat_interval: 2h
+      
+    # Security alerts
+    - match:
+        category: security
+      receiver: 'security-team'
+      group_wait: 1m
+      group_interval: 5m
+      repeat_interval: 6h
+
+# Time intervals for routing
+time_intervals:
+  - name: business_hours
+    time_intervals:
+      - times:
+          - start_time: '09:00'
+            end_time: '17:00'
+        weekdays: ['monday:friday']
+        
+  - name: after_hours
+    time_intervals:
+      - times:
+          - start_time: '17:00'
+            end_time: '09:00'
+        weekdays: ['monday:friday']
+      - weekdays: ['saturday', 'sunday']
+
+# Inhibition rules to prevent alert spam
+inhibit_rules:
+  # If service is down, don't alert on high latency
+  - source_matchers:
+      - alertname="ServiceDown"
+    target_matchers:
+      - alertname="HighInferenceLatency"
+    equal: ['instance']
+    
+  # If emergency shutdown is triggered, don't alert on safety violations
+  - source_matchers:
+      - alertname="EmergencyShutdownTriggered"
+    target_matchers:
+      - category="safety"
+    equal: ['instance']
+    
+  # If memory is critical, don't alert on high memory warning
+  - source_matchers:
+      - alertname="CriticalMemoryUsage"
+    target_matchers:
+      - alertname="HighMemoryUsage"
+    equal: ['instance']
+
+# Receiver configurations
+receivers:
+  # Default receiver for all alerts
+  - name: 'default-receiver'
+    slack_configs:
+      - api_url: '{{ .SlackAPIURL }}'
+        channel: '#neorl-alerts'
+        title: 'neoRL-Industrial Alert'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Severity:* {{ .Labels.severity }}
+          *Time:* {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          {{ if .Annotations.runbook_url }}*Runbook:* {{ .Annotations.runbook_url }}{{ end }}
+          {{ end }}
+        send_resolved: true
+
+  # Critical safety alerts - multiple channels
+  - name: 'safety-critical'
+    slack_configs:
+      - api_url: '{{ .SlackAPIURL }}'
+        channel: '#safety-critical'
+        title: '🚨 CRITICAL SAFETY ALERT 🚨'
+        text: |
+          {{ range .Alerts }}
+          *CRITICAL SAFETY VIOLATION DETECTED*
+          
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Time:* {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          *Runbook:* {{ .Annotations.runbook_url }}
+          
+          @channel @here - Immediate action required!
+          {{ end }}
+        color: 'danger'
+        send_resolved: true
+        
+    email_configs:
+      - to: 'safety-team@neorl-industrial.com'
+        subject: '🚨 CRITICAL SAFETY ALERT - neoRL-Industrial'
+        body: |
+          CRITICAL SAFETY VIOLATION DETECTED
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Time: {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          Runbook: {{ .Annotations.runbook_url }}
+          {{ end }}
+          
+          Immediate action required!
+        headers:
+          Priority: 'high'
+          
+    # PagerDuty integration for safety alerts
+    pagerduty_configs:
+      - routing_key: 'your-pagerduty-integration-key'
+        description: 'Critical Safety Alert: {{ .GroupLabels.alertname }}'
+        severity: 'critical'
+        details:
+          summary: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+          timestamp: '{{ .Alerts.Firing | len }}'
+
+  # Performance critical alerts
+  - name: 'performance-critical'
+    slack_configs:
+      - api_url: '{{ .SlackAPIURL }}'
+        channel: '#performance-alerts'
+        title: '⚡ Performance Critical Alert'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Severity:* {{ .Labels.severity }}
+          *Time:* {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          {{ if .Annotations.runbook_url }}*Runbook:* {{ .Annotations.runbook_url }}{{ end }}
+          {{ end }}
+        color: 'warning'
+        send_resolved: true
+
+  # Business hours warnings
+  - name: 'business-hours-warnings'
+    slack_configs:
+      - api_url: '{{ .SlackAPIURL }}'
+        channel: '#neorl-warnings'
+        title: 'neoRL-Industrial Warning'
+        text: |
+          {{ range .Alerts }}
+          *Warning:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Time:* {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          {{ if .Annotations.runbook_url }}*Runbook:* {{ .Annotations.runbook_url }}{{ end }}
+          {{ end }}
+        send_resolved: true
+
+  # After hours critical alerts
+  - name: 'after-hours-critical'
+    email_configs:
+      - to: 'oncall@neorl-industrial.com'
+        subject: 'CRITICAL Alert - neoRL-Industrial (After Hours)'
+        body: |
+          Critical alert detected outside business hours:
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Time: {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          Runbook: {{ .Annotations.runbook_url }}
+          {{ end }}
+
+  # Security team alerts
+  - name: 'security-team'
+    slack_configs:
+      - api_url: '{{ .SlackAPIURL }}'
+        channel: '#security-alerts'
+        title: '🔒 Security Alert'
+        text: |
+          {{ range .Alerts }}
+          *Security Alert:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Time:* {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          {{ if .Annotations.runbook_url }}*Runbook:* {{ .Annotations.runbook_url }}{{ end }}
+          {{ end }}
+        color: 'danger'
+        send_resolved: true
+        
+    email_configs:
+      - to: 'security@neorl-industrial.com'
+        subject: 'Security Alert - neoRL-Industrial'
+        body: |
+          Security alert detected:
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Time: {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          Runbook: {{ .Annotations.runbook_url }}
+          {{ end }}

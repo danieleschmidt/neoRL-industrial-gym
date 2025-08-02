@@ -1,0 +1,84 @@
+# Prometheus configuration for neoRL-industrial-gym monitoring
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: 'production'
+    project: 'neorl-industrial'
+
+rule_files:
+  - "/etc/prometheus/rules/*.yml"
+
+scrape_configs:
+  # Main application metrics
+  - job_name: 'neorl-industrial-app'
+    static_configs:
+      - targets: ['neorl-app:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 5s
+    scrape_timeout: 4s
+    honor_labels: true
+    
+  # Safety monitoring system (high frequency)
+  - job_name: 'safety-monitor'
+    static_configs:
+      - targets: ['neorl-app:8001']
+    metrics_path: '/safety/metrics'
+    scrape_interval: 1s  # High frequency for safety-critical monitoring
+    scrape_timeout: 500ms
+    honor_labels: true
+    
+  # System metrics from node exporter
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 10s
+    
+  # Docker container metrics
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 10s
+    
+  # MLflow tracking server
+  - job_name: 'mlflow'
+    static_configs:
+      - targets: ['mlflow:5000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+      
+  # Grafana metrics
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+      timeout: 10s
+      api_version: v2
+
+# Remote write configuration for long-term storage (optional)
+# remote_write:
+#   - url: "https://prometheus-remote-write-endpoint"
+#     headers:
+#       Authorization: "Bearer YOUR_TOKEN"
+#     queue_config:
+#       max_samples_per_send: 1000
+#       max_shards: 200
+#       capacity: 10000
+
+# Remote read configuration (optional)
+# remote_read:
+#   - url: "https://prometheus-remote-read-endpoint"
+#     headers:
+#       Authorization: "Bearer YOUR_TOKEN"
