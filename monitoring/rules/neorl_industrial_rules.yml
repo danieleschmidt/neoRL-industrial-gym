@@ -1,0 +1,270 @@
+# Prometheus alerting rules for neoRL-industrial-gym
+
+groups:
+  # Critical safety alerts - highest priority
+  - name: safety_critical
+    interval: 1s  # Evaluate very frequently for safety
+    rules:
+      - alert: SafetyViolationDetected
+        expr: increase(safety_violations_total[10s]) > 0
+        for: 0s  # Alert immediately
+        labels:
+          severity: critical
+          category: safety
+          priority: p0
+        annotations:
+          summary: "Safety constraint violation detected"
+          description: "{{ $labels.constraint_type }} safety violation detected with severity {{ $labels.severity }}. Immediate attention required."
+          runbook_url: "https://docs.neorl-industrial.com/runbooks/safety-violation"
+          
+      - alert: EmergencyShutdownTriggered
+        expr: increase(emergency_shutdowns_total[1m]) > 0
+        for: 0s
+        labels:
+          severity: critical
+          category: safety
+          priority: p0
+        annotations:
+          summary: "Emergency shutdown activated"
+          description: "Emergency shutdown has been triggered. System is in safe state. Investigation required immediately."
+          runbook_url: "https://docs.neorl-industrial.com/runbooks/emergency-shutdown"
+          
+      - alert: SafetySystemDown
+        expr: up{job="safety-monitor"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          category: safety
+          priority: p0
+        annotations:
+          summary: "Safety monitoring system is down"
+          description: "Safety monitoring system is not responding. This is a critical failure that requires immediate attention."
+          runbook_url: "https://docs.neorl-industrial.com/runbooks/safety-system-down"
+
+  # Performance and operational alerts
+  - name: performance_alerts
+    interval: 15s
+    rules:
+      - alert: HighInferenceLatency
+        expr: histogram_quantile(0.95, rate(inference_latency_seconds_bucket[1m])) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          category: performance
+          priority: p2
+        annotations:
+          summary: "High inference latency detected"
+          description: "95th percentile inference latency is {{ $value | humanizeDuration }}. Target is <100ms for industrial applications."
+          runbook_url: "https://docs.neorl-industrial.com/runbooks/high-latency"
+          
+      - alert: CriticalInferenceLatency
+        expr: histogram_quantile(0.95, rate(inference_latency_seconds_bucket[1m])) > 0.5
+        for: 1m
+        labels:
+          severity: critical
+          category: performance
+          priority: p1
+        annotations:
+          summary: "Critical inference latency detected"
+          description: "95th percentile inference latency is {{ $value | humanizeDuration }}. This may impact real-time control performance."
+          runbook_url: "https://docs.neorl-industrial.com/runbooks/critical-latency"
+          
+      - alert: LowSystemThroughput
+        expr: rate(actions_computed_total[5m]) < 10
+        for: 3m
+        labels:
+          severity: warning
+          category: performance
+          priority: p2
+        annotations:
+          summary: "Low system throughput"
+          description: "Action computation rate is {{ $value | printf \"%.2f\" }} actions/second. Expected rate is >10 actions/second."
+          runbook_url: "https://docs.neorl-industrial.com/runbooks/low-throughput"
+          
+      - alert: ModelPerformanceDegradation
+        expr: rate(episode_failures_total[1h]) / rate(episodes_total[1h]) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          category: quality
+          priority: p2
+        annotations:
+          summary: "Model performance degradation detected"
+          description: "Episode failure rate is {{ $value | printf \"%.2f\" }}% over the last hour. This may indicate model drift or environmental changes."
+          runbook_url: "https://docs.neorl-industrial.com/runbooks/performance-degradation"
+
+  # Resource utilization alerts
+  - name: resource_alerts
+    interval: 30s
+    rules:
+      - alert: HighMemoryUsage
+        expr: (process_resident_memory_bytes / 1024 / 1024) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          category: resources
+          priority: p2
+        annotations:
+          summary: "High memory usage"
+          description: "Application memory usage is {{ $value | printf \"%.0f\" }}MB. Consider scaling or optimizing memory usage."
+          runbook_url: "https://docs.neorl-industrial.com/runbooks/high-memory"
+          
+      - alert: CriticalMemoryUsage
+        expr: (process_resident_memory_bytes / 1024 / 1024) > 2000
+        for: 2m
+        labels:
+          severity: critical
+          category: resources
+          priority: p1
+        annotations:
+          summary: "Critical memory usage"
+          description: "Application memory usage is {{ $value | printf \"%.0f\" }}MB. Risk of OOM kill."
+          runbook_url: "https://docs.neorl-industrial.com/runbooks/critical-memory"
+          
+      - alert: HighCPUUsage
+        expr: rate(process_cpu_seconds_total[1m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          category: resources
+          priority: p2
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value | printf \"%.2f\" }}%. Consider scaling or optimizing CPU usage."
+          runbook_url: "https://docs.neorl-industrial.com/runbooks/high-cpu"
+          
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.1
+        for: 1m
+        labels:
+          severity: warning
+          category: resources
+          priority: p2
+        annotations:
+          summary: "Low disk space"
+          description: "Available disk space is {{ $value | printf \"%.2f\" }}% on {{ $labels.instance }}."
+          runbook_url: "https://docs.neorl-industrial.com/runbooks/low-disk-space"
+
+  # System health alerts
+  - name: system_health
+    interval: 30s
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: availability
+          priority: p1
+        annotations:
+          summary: "Service is down"
+          description: "{{ $labels.job }} service on {{ $labels.instance }} has been down for more than 1 minute."
+          runbook_url: "https://docs.neorl-industrial.com/runbooks/service-down"
+          
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          category: reliability
+          priority: p2
+        annotations:
+          summary: "High error rate"
+          description: "Error rate is {{ $value | printf \"%.2f\" }}% for {{ $labels.job }}."
+          runbook_url: "https://docs.neorl-industrial.com/runbooks/high-error-rate"
+          
+      - alert: DatabaseConnectionFailure
+        expr: increase(database_connection_errors_total[1m]) > 0
+        for: 0s
+        labels:
+          severity: critical
+          category: database
+          priority: p1
+        annotations:
+          summary: "Database connection failure"
+          description: "Database connection errors detected. Data persistence may be affected."
+          runbook_url: "https://docs.neorl-industrial.com/runbooks/database-failure"
+
+  # Data quality alerts
+  - name: data_quality
+    interval: 1m
+    rules:
+      - alert: DataQualityIssue
+        expr: increase(data_validation_failures_total[5m]) > 5
+        for: 2m
+        labels:
+          severity: warning
+          category: data_quality
+          priority: p2
+        annotations:
+          summary: "Data quality issues detected"
+          description: "{{ $value }} data validation failures in the last 5 minutes."
+          runbook_url: "https://docs.neorl-industrial.com/runbooks/data-quality"
+          
+      - alert: MissingTrainingData
+        expr: time() - last_training_data_timestamp > 3600
+        for: 0s
+        labels:
+          severity: warning
+          category: data_quality
+          priority: p2
+        annotations:
+          summary: "Training data not updated"
+          description: "Training data has not been updated for {{ $value | humanizeDuration }}."
+          runbook_url: "https://docs.neorl-industrial.com/runbooks/missing-data"
+
+  # MLflow and experiment tracking alerts
+  - name: mlflow_alerts
+    interval: 1m
+    rules:
+      - alert: MLflowServiceDown
+        expr: up{job="mlflow"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          category: mlops
+          priority: p2
+        annotations:
+          summary: "MLflow tracking service is down"
+          description: "MLflow tracking service is not responding. Experiment tracking may be affected."
+          runbook_url: "https://docs.neorl-industrial.com/runbooks/mlflow-down"
+          
+      - alert: ExperimentTrackingFailure
+        expr: increase(mlflow_experiment_failures_total[5m]) > 3
+        for: 1m
+        labels:
+          severity: warning
+          category: mlops
+          priority: p3
+        annotations:
+          summary: "Experiment tracking failures"
+          description: "{{ $value }} experiment tracking failures in the last 5 minutes."
+          runbook_url: "https://docs.neorl-industrial.com/runbooks/experiment-tracking-failure"
+
+  # Security and compliance alerts
+  - name: security_alerts
+    interval: 30s
+    rules:
+      - alert: UnauthorizedAccess
+        expr: increase(authentication_failures_total[1m]) > 5
+        for: 0s
+        labels:
+          severity: warning
+          category: security
+          priority: p2
+        annotations:
+          summary: "Multiple authentication failures"
+          description: "{{ $value }} authentication failures detected in the last minute from {{ $labels.source_ip }}."
+          runbook_url: "https://docs.neorl-industrial.com/runbooks/auth-failures"
+          
+      - alert: SecurityAuditFailure
+        expr: increase(audit_log_errors_total[5m]) > 0
+        for: 0s
+        labels:
+          severity: critical
+          category: security
+          priority: p1
+        annotations:
+          summary: "Security audit logging failure"
+          description: "Audit logging system has failed. This is a compliance issue that requires immediate attention."
+          runbook_url: "https://docs.neorl-industrial.com/runbooks/audit-failure"
