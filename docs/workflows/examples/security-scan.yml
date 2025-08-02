@@ -1,0 +1,500 @@
+# Comprehensive Security Scanning for neoRL-industrial-gym
+# This workflow performs security analysis, dependency scanning, and compliance checks
+
+name: Security Scanning
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run weekly security scans on Monday at 2 AM UTC
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+    inputs:
+      scan_type:
+        description: 'Type of security scan'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+          - full
+          - dependencies
+          - container
+          - code
+
+permissions:
+  contents: read
+  security-events: write
+
+env:
+  # Security scanning configuration
+  PYTHONPATH: src
+  PYTHONBUFFERED: 1
+
+jobs:
+  # Dependency vulnerability scanning
+  dependency-scan:
+    name: Dependency Security Scan
+    runs-on: ubuntu-latest
+    if: github.event.inputs.scan_type == 'dependencies' || github.event.inputs.scan_type == 'full' || github.event.inputs.scan_type == ''
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install safety bandit semgrep pip-audit
+          pip install -e .
+      
+      - name: Run Safety check
+        run: |
+          safety check --json --output safety-report.json || true
+          safety check --output safety-report.txt || true
+        continue-on-error: true
+      
+      - name: Run pip-audit
+        run: |
+          pip-audit --format=json --output=pip-audit-report.json
+          pip-audit --format=cyclonedx-json --output=pip-audit-sbom.json
+        continue-on-error: true
+      
+      - name: Check for known vulnerabilities in requirements
+        run: |
+          # Check if any critical vulnerabilities are present
+          if [ -f safety-report.json ]; then
+            python -c "
+            import json
+            with open('safety-report.json') as f:
+              data = json.load(f)
+            if data and len(data) > 0:
+              critical = [v for v in data if 'critical' in str(v).lower()]
+              if critical:
+                print(f'CRITICAL: Found {len(critical)} critical vulnerabilities')
+                exit(1)
+            "
+          fi
+      
+      - name: Upload dependency scan results
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-scan-results
+          path: |
+            safety-report.json
+            safety-report.txt
+            pip-audit-report.json
+            pip-audit-sbom.json
+          retention-days: 30
+
+  # Code security analysis
+  code-security:
+    name: Code Security Analysis
+    runs-on: ubuntu-latest
+    if: github.event.inputs.scan_type == 'code' || github.event.inputs.scan_type == 'full' || github.event.inputs.scan_type == ''
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      
+      - name: Install security tools
+        run: |
+          pip install --upgrade pip
+          pip install bandit semgrep
+          pip install -e .
+      
+      - name: Run Bandit security scan
+        run: |
+          bandit -r src/ -f json -o bandit-report.json
+          bandit -r src/ -f txt -o bandit-report.txt
+        continue-on-error: true
+      
+      - name: Run Semgrep scan
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: >- 
+            p/security-audit
+            p/secrets
+            p/python
+            p/bandit
+          publishToken: ${{ secrets.SEMGREP_APP_TOKEN }}
+          publishDeployment: true
+          generateSarif: "1"
+        continue-on-error: true
+      
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
+        if: always()
+      
+      - name: Check for high-severity issues
+        run: |
+          if [ -f bandit-report.json ]; then
+            python -c "
+            import json
+            with open('bandit-report.json') as f:
+              data = json.load(f)
+            high_severity = [r for r in data.get('results', []) if r.get('issue_severity') == 'HIGH']
+            if high_severity:
+              print(f'WARNING: Found {len(high_severity)} high-severity security issues')
+              for issue in high_severity[:5]:  # Show first 5
+                print(f\"  - {issue.get('test_name')}: {issue.get('issue_text')}\")
+            "
+          fi
+      
+      - name: Upload code security results
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-security-results
+          path: |
+            bandit-report.json
+            bandit-report.txt
+            semgrep.sarif
+          retention-days: 30
+
+  # Container security scanning
+  container-security:
+    name: Container Security Scan
+    runs-on: ubuntu-latest
+    if: github.event.inputs.scan_type == 'container' || github.event.inputs.scan_type == 'full' || github.event.inputs.scan_type == ''
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build image for scanning
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: production
+          load: true
+          tags: neorl-industrial:security-scan
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'neorl-industrial:security-scan'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+          exit-code: '0'  # Don't fail on vulnerabilities
+      
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+        if: always()
+      
+      - name: Run Grype vulnerability scanner
+        uses: anchore/scan-action@v3
+        id: grype-scan
+        with:
+          image: "neorl-industrial:security-scan"
+          fail-build: false
+          acs-report-enable: true
+          severity-cutoff: medium
+      
+      - name: Generate container security report
+        run: |
+          echo "# Container Security Report" > container-security-report.md
+          echo "Generated on: $(date)" >> container-security-report.md
+          echo "" >> container-security-report.md
+          
+          if [ -f trivy-results.sarif ]; then
+            echo "## Trivy Scan Results" >> container-security-report.md
+            python -c "
+            import json
+            with open('trivy-results.sarif') as f:
+              data = json.load(f)
+            results = data.get('runs', [{}])[0].get('results', [])
+            print(f'Found {len(results)} security findings')
+            " >> container-security-report.md
+          fi
+          
+          if [ -f "${{ steps.grype-scan.outputs.sarif }}" ]; then
+            echo "## Grype Scan Results" >> container-security-report.md
+            echo "SARIF report available: ${{ steps.grype-scan.outputs.sarif }}" >> container-security-report.md
+          fi
+      
+      - name: Upload container security results
+        uses: actions/upload-artifact@v4
+        with:
+          name: container-security-results
+          path: |
+            trivy-results.sarif
+            container-security-report.md
+            ${{ steps.grype-scan.outputs.sarif }}
+          retention-days: 30
+
+  # SBOM (Software Bill of Materials) generation
+  sbom-generation:
+    name: Generate SBOM
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      
+      - name: Install SBOM tools
+        run: |
+          pip install --upgrade pip
+          pip install cyclonedx-bom syft-py
+          pip install -e .
+      
+      - name: Generate Python SBOM with CycloneDX
+        run: |
+          cyclonedx-py -o sbom-cyclonedx.json
+          cyclonedx-py -o sbom-cyclonedx.xml --format xml
+      
+      - name: Generate SBOM with Syft
+        run: |
+          # Install syft
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          
+          # Generate SBOM for the current directory
+          syft . -o spdx-json=sbom-syft.spdx.json
+          syft . -o cyclonedx-json=sbom-syft.cyclonedx.json
+      
+      - name: Validate SBOM files
+        run: |
+          # Check that SBOM files are valid JSON
+          python -c "import json; json.load(open('sbom-cyclonedx.json'))"
+          python -c "import json; json.load(open('sbom-syft.spdx.json'))"
+          echo "✓ SBOM files are valid"
+      
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-reports
+          path: |
+            sbom-cyclonedx.json
+            sbom-cyclonedx.xml
+            sbom-syft.spdx.json
+            sbom-syft.cyclonedx.json
+          retention-days: 90
+
+  # License compliance checking
+  license-compliance:
+    name: License Compliance Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      
+      - name: Install license checking tools
+        run: |
+          pip install --upgrade pip
+          pip install pip-licenses licensecheck
+          pip install -e .
+      
+      - name: Generate license report
+        run: |
+          # Generate detailed license information
+          pip-licenses --format=json --output-file=licenses.json
+          pip-licenses --format=csv --output-file=licenses.csv
+          pip-licenses --format=rst --output-file=licenses.rst
+          
+          # Create human-readable license summary
+          echo "# License Compliance Report" > license-report.md
+          echo "Generated on: $(date)" >> license-report.md
+          echo "" >> license-report.md
+          
+          pip-licenses --format=markdown >> license-report.md
+      
+      - name: Check for problematic licenses
+        run: |
+          # Check for GPL and other copyleft licenses that might be problematic
+          echo "Checking for potentially problematic licenses..."
+          
+          # This will fail if GPL, AGPL, or LGPL licenses are found
+          pip-licenses --fail-on="GPL.*,AGPL.*,LGPL.*" || {
+            echo "⚠️  WARNING: Found potentially problematic copyleft licenses"
+            echo "Please review the license report and consult legal team if necessary"
+            
+            # List problematic licenses for review
+            pip-licenses --format=json | python -c "
+            import json, sys
+            data = json.load(sys.stdin)
+            problematic = [pkg for pkg in data if any(license_type in pkg.get('License', '') for license_type in ['GPL', 'AGPL', 'LGPL'])]
+            if problematic:
+              print('Problematic licenses found:')
+              for pkg in problematic:
+                print(f\"  - {pkg['Name']} ({pkg['Version']}): {pkg['License']}\")
+            "
+            exit 1
+          }
+          
+          echo "✓ No problematic licenses found"
+      
+      - name: Upload license compliance report
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-compliance-report
+          path: |
+            licenses.json
+            licenses.csv
+            licenses.rst
+            license-report.md
+          retention-days: 90
+
+  # Security summary and reporting
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, code-security, container-security, sbom-generation, license-compliance]
+    if: always()
+    
+    steps:
+      - name: Download all security artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: security-artifacts
+      
+      - name: Generate comprehensive security report
+        run: |
+          echo "# Security Scan Summary Report" > security-summary.md
+          echo "Generated on: $(date)" >> security-summary.md
+          echo "Repository: ${{ github.repository }}" >> security-summary.md
+          echo "Commit: ${{ github.sha }}" >> security-summary.md
+          echo "Branch: ${{ github.ref_name }}" >> security-summary.md
+          echo "" >> security-summary.md
+          
+          # Check each scan result
+          echo "## Scan Results Overview" >> security-summary.md
+          echo "" >> security-summary.md
+          
+          if [ -d "security-artifacts/dependency-scan-results" ]; then
+            echo "✓ Dependency scan completed" >> security-summary.md
+          else
+            echo "❌ Dependency scan failed or skipped" >> security-summary.md
+          fi
+          
+          if [ -d "security-artifacts/code-security-results" ]; then
+            echo "✓ Code security analysis completed" >> security-summary.md
+          else
+            echo "❌ Code security analysis failed or skipped" >> security-summary.md
+          fi
+          
+          if [ -d "security-artifacts/container-security-results" ]; then
+            echo "✓ Container security scan completed" >> security-summary.md
+          else
+            echo "❌ Container security scan failed or skipped" >> security-summary.md
+          fi
+          
+          if [ -d "security-artifacts/sbom-reports" ]; then
+            echo "✓ SBOM generation completed" >> security-summary.md
+          else
+            echo "❌ SBOM generation failed or skipped" >> security-summary.md
+          fi
+          
+          if [ -d "security-artifacts/license-compliance-report" ]; then
+            echo "✓ License compliance check completed" >> security-summary.md
+          else
+            echo "❌ License compliance check failed or skipped" >> security-summary.md
+          fi
+          
+          echo "" >> security-summary.md
+          echo "## Recommendations" >> security-summary.md
+          echo "" >> security-summary.md
+          echo "1. Review all security scan results in the artifacts" >> security-summary.md
+          echo "2. Address any high-severity vulnerabilities immediately" >> security-summary.md
+          echo "3. Update dependencies with known vulnerabilities" >> security-summary.md
+          echo "4. Review and approve any new licenses" >> security-summary.md
+          echo "5. Ensure SBOM is included in release artifacts" >> security-summary.md
+      
+      - name: Upload security summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-summary-report
+          path: security-summary.md
+          retention-days: 30
+      
+      - name: Comment on PR with security summary (if PR)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync('security-summary.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Security Scan Results\n\n${summary}\n\n*This comment was generated automatically by the security scanning workflow.*`
+            });
+
+  # Notify security team on critical findings
+  security-notification:
+    name: Security Notification
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, code-security, container-security]
+    if: always() && (failure() || github.ref == 'refs/heads/main')
+    
+    steps:
+      - name: Notify security team on critical findings
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          custom_payload: |
+            {
+              text: "🚨 Critical security findings detected in neoRL-industrial-gym",
+              attachments: [{
+                color: 'danger',
+                fields: [{
+                  title: 'Repository',
+                  value: '${{ github.repository }}',
+                  short: true
+                }, {
+                  title: 'Branch',
+                  value: '${{ github.ref_name }}',
+                  short: true
+                }, {
+                  title: 'Commit',
+                  value: '${{ github.sha }}',
+                  short: true
+                }, {
+                  title: 'Action',
+                  value: '${{ github.workflow }}',
+                  short: true
+                }],
+                actions: [{
+                  type: 'button',
+                  text: 'View Security Results',
+                  url: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+                }]
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SECURITY_SLACK_WEBHOOK }}
