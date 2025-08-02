@@ -1,0 +1,214 @@
+# Docker build context exclusions for neoRL-industrial-gym
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Testing and quality assurance
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.mypy_cache/
+.dmypy.json
+dmyp.json
+.ruff_cache/
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Documentation build
+docs/_build/
+site/
+
+# Data and model files
+data/
+datasets/
+*.csv
+*.json
+*.parquet
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+models/
+checkpoints/
+tensorboard_logs/
+mlruns/
+wandb/
+.neptune/
+.aim/
+
+# JAX cache
+jax_cache/
+
+# Industrial datasets and traces
+traces/
+factory_data/
+replay_buffers/
+offline_datasets/
+evaluation_results/
+policy_checkpoints/
+
+# Security-sensitive files
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+*.keystore
+config.json
+secrets.json
+.secrets/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+auth.json
+credentials.json
+service-account*.json
+.aws/
+.azure/
+.gcp/
+
+# Industrial/Factory security
+factory_configs/
+plc_configs/
+scada_data/
+*.cfg
+*.ini
+connection_strings.txt
+database.db
+*.sqlite
+
+# Temporary and backup files
+*.bak
+*.backup
+*.orig
+*.rej
+*.tmp
+*.temp
+*~
+.#*
+#*#
+
+# Container and orchestration
+docker-compose.override.yml
+.env.docker
+.env.k8s
+*.kubeconfig
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Node.js (if any frontend components)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Development and debugging
+.vscode/settings.json
+.vscode/launch.json
+
+# Container-specific exclusions
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+
+# Documentation source that doesn't need to be in container
+README.md
+CHANGELOG.md
+CONTRIBUTING.md
+docs/
+
+# Development configuration that shouldn't be in production
+.pre-commit-config.yaml
+.editorconfig
+pytest.ini
+tox.ini
+
+# Large ML/AI datasets that should be volume mounted instead
+*.npz
+*.npy
+factory_simulation_data/
+real_world_datasets/
+
+# MLflow artifacts (should be volume mounted)
+artifacts/
+mlflow_tracking/
+
+# GPU cache
+.cache/
+
+# Development utilities
+scripts/dev_*.py
+scripts/*_dev.py
+
+# Temporary development files
+scratch/
+tmp/
+temp/
