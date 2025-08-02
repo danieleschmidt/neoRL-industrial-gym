@@ -1,18 +1,59 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
 root = true
 
+# All files
 [*]
 charset = utf-8
 end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
 indent_style = space
-indent_size = 4
+indent_size = 2
 
+# Python files
+[*.py]
+indent_size = 4
+max_line_length = 88
+
+# YAML files
 [*.{yml,yaml}]
 indent_size = 2
 
-[*.{json,md}]
+# JSON files
+[*.json]
 indent_size = 2
 
+# Markdown files
+[*.md]
+trim_trailing_whitespace = false
+max_line_length = 80
+
+# Makefile
 [Makefile]
 indent_style = tab
+
+# Shell scripts
+[*.sh]
+indent_size = 2
+
+# Docker files
+[Dockerfile*]
+indent_size = 2
+
+# Configuration files
+[*.{toml,cfg,ini}]
+indent_size = 2
+
+# Web files
+[*.{html,css,js,ts}]
+indent_size = 2
+
+# XML files
+[*.xml]
+indent_size = 2
+
+# Requirements files
+[requirements*.txt]
+indent_size = 4
