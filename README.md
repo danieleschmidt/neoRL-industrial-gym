@@ -223,7 +223,7 @@ We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ```bibtex
 @inproceedings{neorl_industrial_gym,
   title={NeoRL-Industrial: Bridging Offline RL to Real-World Control},
-  author={Your Name},
+  author={Daniel Schmidt},
   booktitle={Conference on Robot Learning},
   year={2025}
 }
