@@ -202,4 +202,188 @@ class CQLAgent(OfflineAgent):
                 
                 total_loss = td_loss + self.cql_alpha * cql_loss
                 
-                return total_loss, {\n                    "td_loss": td_loss,\n                    "cql_loss": cql_loss,\n                    "q1_mean": q1.mean(),\n                    "q2_mean": q2.mean(),\n                }\n            \n            # Update critic\n            grad_fn = jax.value_and_grad(critic_loss_fn, has_aux=True)\n            (critic_loss, critic_info), critic_grads = grad_fn(state["critic"].params)\n            \n            new_critic_state = state["critic"].apply_gradients(grads=critic_grads)\n            \n            # Update actor\n            def actor_loss_fn(actor_params):\n                actions_pred = state["actor"].apply_fn(\n                    actor_params, observations, training=True\n                )\n                \n                q1, q2 = state["critic"].apply_fn(\n                    new_critic_state.params, observations, actions_pred, training=False\n                )\n                \n                q_pred = jnp.minimum(q1, q2)\n                \n                # Safety penalty if safety critic is enabled\n                safety_penalty = 0.0\n                if state["safety"] is not None:\n                    safety_pred = state["safety"].apply_fn(\n                        state["safety"].params, observations, actions_pred, training=False\n                    )\n                    # Penalize actions with high safety violation probability\n                    safety_penalty = self.safety_penalty * jnp.mean(\n                        jnp.maximum(0, safety_pred - self.constraint_threshold)\n                    )\n                \n                # Actor loss: maximize Q-values while respecting safety\n                actor_loss = -jnp.mean(q_pred) + safety_penalty\n                \n                return actor_loss, {\n                    "actor_loss": actor_loss,\n                    "q_pred_mean": q_pred.mean(),\n                    "safety_penalty": safety_penalty,\n                }\n            \n            grad_fn = jax.value_and_grad(actor_loss_fn, has_aux=True)\n            (actor_loss, actor_info), actor_grads = grad_fn(state["actor"].params)\n            \n            new_actor_state = state["actor"].apply_gradients(grads=actor_grads)\n            \n            # Update safety critic if enabled\n            new_safety_state = state["safety"]\n            safety_info = {}\n            \n            if state["safety"] is not None:\n                # Create safety labels (simplified: based on reward)\n                # In practice, this should be based on actual safety violations\n                safety_labels = (rewards < -50).astype(jnp.float32)\n                \n                def safety_loss_fn(safety_params):\n                    safety_pred = state["safety"].apply_fn(\n                        safety_params, observations, actions, training=True\n                    )\n                    \n                    # Binary cross-entropy loss\n                    safety_loss = -jnp.mean(\n                        safety_labels * jnp.log(safety_pred + 1e-8) +\n                        (1 - safety_labels) * jnp.log(1 - safety_pred + 1e-8)\n                    )\n                    \n                    return safety_loss, {\n                        "safety_loss": safety_loss,\n                        "safety_pred_mean": safety_pred.mean(),\n                        "safety_accuracy": jnp.mean(\n                            (safety_pred > 0.5) == safety_labels\n                        ),\n                    }\n                \n                grad_fn = jax.value_and_grad(safety_loss_fn, has_aux=True)\n                (safety_loss, safety_info), safety_grads = grad_fn(state["safety"].params)\n                \n                new_safety_state = state["safety"].apply_gradients(grads=safety_grads)\n            \n            # Update target networks\n            new_actor_state = update_target_network(new_actor_state, self.tau)\n            new_critic_state = update_target_network(new_critic_state, self.tau)\n            \n            # Combine metrics\n            metrics = {**critic_info, **actor_info, **safety_info}\n            \n            new_state = {\n                "actor": new_actor_state,\n                "critic": new_critic_state, \n                "safety": new_safety_state,\n            }\n            \n            return new_state, metrics\n        \n        return train_step\n    \n    def _update_step(\n        self, \n        state: Dict[str, Any], \n        batch: Dict[str, Array]\n    ) -> Tuple[Dict[str, Any], Dict[str, float]]:\n        """Single training update step."""\n        \n        # Add next observations if not present\n        if "next_observations" not in batch:\n            # Assume sequential data, shift observations\n            batch["next_observations"] = np.roll(batch["observations"], -1, axis=0)\n            batch["next_observations"][-1] = batch["observations"][-1]  # Handle last element\n        \n        return self.train_step(state, batch)\n    \n    def predict(\n        self, \n        observations: StateArray, \n        deterministic: bool = True\n    ) -> ActionArray:\n        """Predict actions for given observations."""\n        if not self.is_trained:\n            raise RuntimeError("Agent must be trained before prediction")\n        \n        # Ensure observations are in correct format\n        if len(observations.shape) == 1:\n            observations = observations[None]\n        \n        # Get actions from actor network\n        actions = self.state["actor"].apply_fn(\n            self.state["actor"].params,\n            observations,\n            training=False\n        )\n        \n        # Add noise if not deterministic\n        if not deterministic:\n            key = jax.random.PRNGKey(self.training_step)\n            noise = jax.random.normal(key, actions.shape) * 0.1\n            actions = actions + noise\n            actions = jnp.clip(actions, -1, 1)\n        \n        return np.array(actions)\n    \n    def predict_with_safety(\n        self,\n        observations: StateArray,\n        safety_threshold: Optional[float] = None,\n    ) -> Tuple[ActionArray, Array]:\n        """Predict actions with safety violation probabilities.\n        \n        Args:\n            observations: Input observations\n            safety_threshold: Override default safety threshold\n            \n        Returns:\n            Tuple of (actions, safety_probabilities)\n        """\n        if not self.is_trained or self.state["safety"] is None:\n            raise RuntimeError("Safety critic must be trained")\n        \n        # Get actions\n        actions = self.predict(observations, deterministic=True)\n        \n        # Get safety predictions\n        safety_probs = self.state["safety"].apply_fn(\n            self.state["safety"].params,\n            observations,\n            actions,\n            training=False\n        )\n        \n        threshold = safety_threshold or self.constraint_threshold\n        \n        # Filter actions based on safety threshold\n        safe_mask = safety_probs < threshold\n        \n        # For unsafe actions, take more conservative approach\n        # (in practice, might want more sophisticated handling)\n        actions = np.where(\n            safe_mask[..., None],\n            actions,\n            actions * 0.5  # More conservative actions\n        )\n        \n        return actions, np.array(safety_probs)
+                return total_loss, {
+                    "td_loss": td_loss,
+                    "cql_loss": cql_loss,
+                    "q1_mean": q1.mean(),
+                    "q2_mean": q2.mean(),
+                }
+            
+            # Update critic
+            grad_fn = jax.value_and_grad(critic_loss_fn, has_aux=True)
+            (critic_loss, critic_info), critic_grads = grad_fn(state["critic"].params)
+            
+            new_critic_state = state["critic"].apply_gradients(grads=critic_grads)
+            
+            # Update actor
+            def actor_loss_fn(actor_params):
+                actions_pred = state["actor"].apply_fn(
+                    actor_params, observations, training=True
+                )
+                
+                q1, q2 = state["critic"].apply_fn(
+                    new_critic_state.params, observations, actions_pred, training=False
+                )
+                
+                q_pred = jnp.minimum(q1, q2)
+                
+                # Safety penalty if safety critic is enabled
+                safety_penalty = 0.0
+                if state["safety"] is not None:
+                    safety_pred = state["safety"].apply_fn(
+                        state["safety"].params, observations, actions_pred, training=False
+                    )
+                    # Penalize actions with high safety violation probability
+                    safety_penalty = self.safety_penalty * jnp.mean(
+                        jnp.maximum(0, safety_pred - self.constraint_threshold)
+                    )
+                
+                # Actor loss: maximize Q-values while respecting safety
+                actor_loss = -jnp.mean(q_pred) + safety_penalty
+                
+                return actor_loss, {
+                    "actor_loss": actor_loss,
+                    "q_pred_mean": q_pred.mean(),
+                    "safety_penalty": safety_penalty,
+                }
+            
+            grad_fn = jax.value_and_grad(actor_loss_fn, has_aux=True)
+            (actor_loss, actor_info), actor_grads = grad_fn(state["actor"].params)
+            
+            new_actor_state = state["actor"].apply_gradients(grads=actor_grads)
+            
+            # Update safety critic if enabled
+            new_safety_state = state["safety"]
+            safety_info = {}
+            
+            if state["safety"] is not None:
+                # Create safety labels (simplified: based on reward)
+                # In practice, this should be based on actual safety violations
+                safety_labels = (rewards < -50).astype(jnp.float32)
+                
+                def safety_loss_fn(safety_params):
+                    safety_pred = state["safety"].apply_fn(
+                        safety_params, observations, actions, training=True
+                    )
+                    
+                    # Binary cross-entropy loss
+                    safety_loss = -jnp.mean(
+                        safety_labels * jnp.log(safety_pred + 1e-8) +
+                        (1 - safety_labels) * jnp.log(1 - safety_pred + 1e-8)
+                    )
+                    
+                    return safety_loss, {
+                        "safety_loss": safety_loss,
+                        "safety_pred_mean": safety_pred.mean(),
+                        "safety_accuracy": jnp.mean(
+                            (safety_pred > 0.5) == safety_labels
+                        ),
+                    }
+                
+                grad_fn = jax.value_and_grad(safety_loss_fn, has_aux=True)
+                (safety_loss, safety_info), safety_grads = grad_fn(state["safety"].params)
+                
+                new_safety_state = state["safety"].apply_gradients(grads=safety_grads)
+            
+            # Update target networks
+            new_actor_state = update_target_network(new_actor_state, self.tau)
+            new_critic_state = update_target_network(new_critic_state, self.tau)
+            
+            # Combine metrics
+            metrics = {**critic_info, **actor_info, **safety_info}
+            
+            new_state = {
+                "actor": new_actor_state,
+                "critic": new_critic_state, 
+                "safety": new_safety_state,
+            }
+            
+            return new_state, metrics
+        
+        return train_step
+    
+    def _update_step(
+        self, 
+        state: Dict[str, Any], 
+        batch: Dict[str, Array]
+    ) -> Tuple[Dict[str, Any], Dict[str, float]]:
+        """Single training update step."""
+        
+        # Add next observations if not present
+        if "next_observations" not in batch:
+            # Assume sequential data, shift observations
+            batch["next_observations"] = np.roll(batch["observations"], -1, axis=0)
+            batch["next_observations"][-1] = batch["observations"][-1]  # Handle last element
+        
+        return self.train_step(state, batch)
+    
+    def predict(
+        self, 
+        observations: StateArray, 
+        deterministic: bool = True
+    ) -> ActionArray:
+        """Predict actions for given observations."""
+        if not self.is_trained:
+            raise RuntimeError("Agent must be trained before prediction")
+        
+        # Ensure observations are in correct format
+        if len(observations.shape) == 1:
+            observations = observations[None]
+        
+        # Get actions from actor network
+        actions = self.state["actor"].apply_fn(
+            self.state["actor"].params,
+            observations,
+            training=False
+        )
+        
+        # Add noise if not deterministic
+        if not deterministic:
+            key = jax.random.PRNGKey(self.training_step)
+            noise = jax.random.normal(key, actions.shape) * 0.1
+            actions = actions + noise
+            actions = jnp.clip(actions, -1, 1)
+        
+        return np.array(actions)
+    
+    def predict_with_safety(
+        self,
+        observations: StateArray,
+        safety_threshold: Optional[float] = None,
+    ) -> Tuple[ActionArray, Array]:
+        """Predict actions with safety violation probabilities.
+        
+        Args:
+            observations: Input observations
+            safety_threshold: Override default safety threshold
+            
+        Returns:
+            Tuple of (actions, safety_probabilities)
+        """
+        if not self.is_trained or self.state["safety"] is None:
+            raise RuntimeError("Safety critic must be trained")
+        
+        # Get actions
+        actions = self.predict(observations, deterministic=True)
+        
+        # Get safety predictions
+        safety_probs = self.state["safety"].apply_fn(
+            self.state["safety"].params,
+            observations,
+            actions,
+            training=False
+        )
+        
+        threshold = safety_threshold or self.constraint_threshold
+        
+        # Filter actions based on safety threshold
+        safe_mask = safety_probs < threshold
+        
+        # For unsafe actions, take more conservative approach
+        actions = np.where(
+            safe_mask[..., None],
+            actions,
+            actions * 0.5  # More conservative actions
+        )
+        
+        return actions, np.array(safety_probs)

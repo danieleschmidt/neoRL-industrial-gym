@@ -7,11 +7,11 @@
 [![JAX](https://img.shields.io/badge/JAX-0.4.0+-orange.svg)](https://github.com/google/jax)
 [![MLflow](https://img.shields.io/badge/MLflow-2.0+-blue.svg)](https://mlflow.org/)
 
-## 🏭 Overview
+## Overview
 
 **neoRL-industrial-gym** bridges the gap between academic offline RL research and real-world industrial control systems. Building on NeoRL-2's foundation, we provide production-ready benchmarks using actual factory PID/PLC loops, with a focus on safety-critical applications where online exploration is prohibitively expensive.
 
-## 🎯 Key Features
+## Features
 
 - **7 Industrial Simulators**: Real-world PID/PLC control loops from manufacturing environments
 - **D4RL-Style Datasets**: Standardized offline trajectories with varying quality levels
@@ -31,7 +31,7 @@
 | PowerGrid-v0 | 32 | 8 | 3M steps | Frequency, Voltage |
 | SupplyChain-v0 | 28 | 10 | 2.5M steps | Inventory, Delays |
 
-## 🚀 Installation
+## Installation
 
 ```bash
 # Clone the repository
@@ -52,7 +52,7 @@ pip install --upgrade "jax[cpu]"
 pip install -e .
 ```
 
-## 🎮 Quick Start
+## Quick Start
 
 ### Basic Usage
 
