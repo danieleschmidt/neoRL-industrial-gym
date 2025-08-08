@@ -1,6 +1,8 @@
 # Core dependencies
 jax>=0.4.0
 jaxlib>=0.4.0
+flax>=0.7.0
+optax>=0.1.7
 numpy>=1.21.0
 gym>=0.21.0
 gymnasium>=0.28.0

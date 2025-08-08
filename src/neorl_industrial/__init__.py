@@ -8,7 +8,6 @@ except ImportError:
 from .core.types import DatasetQuality, SafetyConstraint, SafetyMetrics
 from .environments import IndustrialEnv, ChemicalReactorEnv
 from .agents import OfflineAgent, CQLAgent
-from .datasets import DatasetLoader
 from .utils import make, evaluate_with_safety
 
 __author__ = "Daniel Schmidt"
@@ -26,8 +25,6 @@ __all__ = [
     # Agents
     "OfflineAgent",
     "CQLAgent",
-    # Data
-    "DatasetLoader",
     # Utils
     "make",
     "evaluate_with_safety",
