@@ -3,7 +3,7 @@
 import jax
 import jax.numpy as jnp
 import numpy as np
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, Optional
 from functools import partial
 
 from .base import OfflineAgent
@@ -79,7 +79,6 @@ class CQLAgent(OfflineAgent):
         # Create dummy inputs
         dummy_obs = jnp.ones((1, self.state_dim))
         dummy_action = jnp.ones((1, self.action_dim))
-        dummy_critic_input = jnp.concatenate([dummy_obs, dummy_action], axis=-1)
         
         # Initialize actor
         actor = Actor(
@@ -317,12 +316,12 @@ class CQLAgent(OfflineAgent):
         
         return self.train_step(state, batch)
     
-    def predict(
+    def _predict_impl(
         self, 
         observations: StateArray, 
         deterministic: bool = True
     ) -> ActionArray:
-        """Predict actions for given observations."""
+        """Implementation of action prediction."""
         if not self.is_trained:
             raise RuntimeError("Agent must be trained before prediction")
         

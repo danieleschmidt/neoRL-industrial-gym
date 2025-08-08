@@ -404,11 +404,12 @@ class ChemicalReactorEnv(IndustrialEnv):
                 else:
                     break
             
-            # Add episode data
-            observations.extend(ep_obs[:-1])  # Remove last obs
-            actions.extend(ep_actions)
-            rewards.extend(ep_rewards)
-            terminals.extend(ep_terminals)
+            # Add episode data (ensure consistency)
+            episode_length = min(len(ep_actions), len(ep_rewards), len(ep_terminals))
+            observations.extend(ep_obs[:episode_length])  # Match action length
+            actions.extend(ep_actions[:episode_length])
+            rewards.extend(ep_rewards[:episode_length])
+            terminals.extend(ep_terminals[:episode_length])
         
         return {
             "observations": np.array(observations, dtype=np.float32),

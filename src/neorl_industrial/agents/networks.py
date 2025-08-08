@@ -142,13 +142,17 @@ class TrainState(train_state.TrainState):
 def create_train_state(
     network: nn.Module,
     key: jax.random.PRNGKey,
-    dummy_input: jnp.ndarray,
+    dummy_input,
     learning_rate: float = 3e-4,
     weight_decay: float = 0.0,
 ) -> TrainState:
     """Create training state with optimizer."""
     
-    params = network.init(key, dummy_input, training=False)
+    # Handle tuple inputs for multi-input networks
+    if isinstance(dummy_input, tuple):
+        params = network.init(key, *dummy_input, training=False)
+    else:
+        params = network.init(key, dummy_input, training=False)
     
     # Create optimizer with optional weight decay
     if weight_decay > 0:
@@ -170,7 +174,7 @@ def update_target_network(
 ) -> TrainState:
     """Soft update of target network parameters."""
     
-    new_target_params = jax.tree_map(
+    new_target_params = jax.tree.map(
         lambda target, online: tau * online + (1 - tau) * target,
         train_state.target_params,
         train_state.params,

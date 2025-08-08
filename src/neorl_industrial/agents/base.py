@@ -7,6 +7,10 @@ import numpy as np
 from typing import Any, Dict, Optional, Tuple, Union
 
 from ..core.types import Array, StateArray, ActionArray
+from ..monitoring.logger import get_logger
+from ..monitoring.performance import get_performance_monitor
+from ..security import get_security_manager, SecurityError
+from ..optimization import get_performance_optimizer, DataloaderOptimizer
 
 
 class OfflineAgent(abc.ABC):
@@ -28,7 +32,23 @@ class OfflineAgent(abc.ABC):
             safety_critic: Whether to use safety critic
             constraint_threshold: Safety constraint threshold
             seed: Random seed for reproducibility
+        
+        Raises:
+            ValueError: If dimensions are invalid
+            TypeError: If parameters are wrong type
         """
+        # Input validation
+        if not isinstance(state_dim, int) or state_dim <= 0:
+            raise ValueError(f"state_dim must be positive integer, got {state_dim}")
+        if not isinstance(action_dim, int) or action_dim <= 0:
+            raise ValueError(f"action_dim must be positive integer, got {action_dim}")
+        if not isinstance(safety_critic, bool):
+            raise TypeError(f"safety_critic must be bool, got {type(safety_critic)}")
+        if not isinstance(constraint_threshold, (int, float)) or constraint_threshold <= 0:
+            raise ValueError(f"constraint_threshold must be positive number, got {constraint_threshold}")
+        if not isinstance(seed, int):
+            raise TypeError(f"seed must be int, got {type(seed)}")
+            
         self.state_dim = state_dim
         self.action_dim = action_dim
         self.safety_critic = safety_critic
@@ -43,6 +63,17 @@ class OfflineAgent(abc.ABC):
         
         # Metrics tracking
         self.training_metrics = []
+        
+        # Logging, monitoring, security, and optimization
+        agent_id = f"agent_{self.__class__.__name__}_{id(self)}"
+        self.logger = get_logger(agent_id)
+        self.performance_monitor = get_performance_monitor(agent_id)
+        self.security_manager = get_security_manager()
+        self.performance_optimizer = get_performance_optimizer()
+        self.dataloader_optimizer = None  # Initialize on demand
+        
+        self.logger.info(f"Initialized agent: state_dim={state_dim}, action_dim={action_dim}, safety_critic={safety_critic}")
+        self.performance_monitor.start_monitoring()
         
     @abc.abstractmethod
     def _init_networks(self) -> Dict[str, Any]:
@@ -63,13 +94,47 @@ class OfflineAgent(abc.ABC):
         """Single training update step.""" 
         pass
     
-    @abc.abstractmethod
     def predict(
         self, 
         observations: StateArray, 
         deterministic: bool = True
     ) -> ActionArray:
         """Predict actions for given observations."""
+        # Security validation of inputs
+        try:
+            # Validate shape more flexibly
+            if len(observations.shape) == 1 and observations.shape[0] == self.state_dim:
+                # Single observation
+                expected_shape = (self.state_dim,)
+            elif len(observations.shape) == 2 and observations.shape[1] == self.state_dim:
+                # Batch of observations
+                expected_shape = None  # Don't validate batch dimension
+            else:
+                raise SecurityError(f"Invalid observation shape: {observations.shape}, expected (..., {self.state_dim})")
+                
+            self.security_manager.validate_input_array(
+                observations,
+                expected_shape=expected_shape,
+                expected_dtype=np.float32,
+                min_value=-1e6,
+                max_value=1e6,
+                allow_nan=False,
+                allow_inf=False,
+            )
+        except SecurityError as e:
+            self.logger.error(f"Input validation failed: {e}")
+            raise ValueError(f"Invalid observations: {e}") from e
+            
+        with self.performance_monitor.time_operation("inference"):
+            return self._predict_impl(observations, deterministic)
+            
+    @abc.abstractmethod
+    def _predict_impl(
+        self, 
+        observations: StateArray, 
+        deterministic: bool = True
+    ) -> ActionArray:
+        """Implementation of prediction logic."""
         pass
     
     def train(
@@ -93,35 +158,88 @@ class OfflineAgent(abc.ABC):
             
         Returns:
             Training metrics
+            
+        Raises:
+            ValueError: If dataset is invalid
+            RuntimeError: If training fails
         """
-        # Initialize networks if not done
-        if not hasattr(self, 'state'):
-            self.state = self._init_networks()
-            self.train_step = self._create_train_step()
+        # Validate dataset
+        required_keys = ['observations', 'actions', 'rewards']
+        for key in required_keys:
+            if key not in dataset:
+                raise ValueError(f"Dataset missing required key: {key}")
         
-        # Prepare dataset
+        # Check dataset consistency
         n_samples = len(dataset['observations'])
-        indices = np.arange(n_samples)
+        for key in required_keys:
+            if len(dataset[key]) != n_samples:
+                raise ValueError(f"Inconsistent dataset sizes: {key} has {len(dataset[key])}, expected {n_samples}")
+        
+        # Validate shapes
+        if dataset['observations'].shape[1] != self.state_dim:
+            raise ValueError(f"Observation dim mismatch: got {dataset['observations'].shape[1]}, expected {self.state_dim}")
+        if dataset['actions'].shape[1] != self.action_dim:
+            raise ValueError(f"Action dim mismatch: got {dataset['actions'].shape[1]}, expected {self.action_dim}")
+        
+        # Validate and secure hyperparameters
+        hyperparams = {
+            "n_epochs": n_epochs,
+            "batch_size": batch_size,
+            "eval_freq": eval_freq,
+        }
+        
+        try:
+            validated_params = self.security_manager.validate_hyperparameters(hyperparams)
+            n_epochs = validated_params["n_epochs"]
+            batch_size = validated_params["batch_size"] 
+            eval_freq = validated_params["eval_freq"]
+        except SecurityError as e:
+            self.logger.error(f"Hyperparameter validation failed: {e}")
+            raise ValueError(f"Invalid hyperparameters: {e}") from e
+        self.logger.info(f"Starting training: {n_epochs} epochs, batch_size={batch_size}")
+        
+        # Initialize networks if not done
+        try:
+            if not hasattr(self, 'state'):
+                self.logger.info("Initializing neural networks...")
+                self.state = self._init_networks()
+                self.train_step = self._create_train_step()
+                self.logger.info("Neural networks initialized successfully")
+        except Exception as e:
+            self.logger.error(f"Failed to initialize networks: {e}", exc_info=True)
+            raise RuntimeError(f"Failed to initialize networks: {e}") from e
+        
+        # Prepare optimized dataloader
+        n_samples = len(dataset['observations'])
+        
+        # Initialize dataloader optimizer
+        if self.dataloader_optimizer is None:
+            self.dataloader_optimizer = DataloaderOptimizer(num_workers=4, prefetch_factor=2)
+            
+        # Create optimized dataloader
+        dataloader = self.dataloader_optimizer.create_optimized_dataloader(
+            dataset=dataset,
+            batch_size=batch_size,
+            shuffle=True,
+            drop_last=True
+        )
         
         epoch_metrics = []
         
         for epoch in range(n_epochs):
-            # Shuffle data
-            np.random.shuffle(indices)
-            
-            # Mini-batch training
+            # Use optimized dataloader
             epoch_losses = []
             
-            for i in range(0, n_samples, batch_size):
-                batch_indices = indices[i:i + batch_size]
-                
-                batch = {
-                    key: val[batch_indices] for key, val in dataset.items()
-                }
-                
-                # Update parameters
-                self.state, step_metrics = self._update_step(self.state, batch)
-                epoch_losses.append(step_metrics)
+            for batch in dataloader():
+                # Update parameters with performance monitoring
+                with self.performance_monitor.time_operation("training_step"):
+                    try:
+                        self.state, step_metrics = self._update_step(self.state, batch)
+                        epoch_losses.append(step_metrics)
+                    except Exception as e:
+                        self.performance_monitor.record_event("errors")
+                        self.logger.error(f"Training step failed: {e}", exc_info=True)
+                        raise
                 
                 self.training_step += 1
             
@@ -133,10 +251,35 @@ class OfflineAgent(abc.ABC):
             
             epoch_metrics.append(avg_metrics)
             
-            # Evaluation
+            # Log progress periodically
+            if (epoch + 1) % max(1, n_epochs // 10) == 0 or epoch == 0:
+                self.logger.log_training_progress(
+                    epoch=epoch + 1,
+                    metrics=avg_metrics,
+                    agent_id=self.__class__.__name__
+                )
+            
+            # Evaluation (temporarily mark as trained for evaluation)
             if eval_env is not None and (epoch + 1) % eval_freq == 0:
-                eval_results = self.evaluate(eval_env, n_episodes=10)
-                avg_metrics.update({f"eval_{k}": v for k, v in eval_results.items()})
+                self.logger.info(f"Running evaluation at epoch {epoch + 1}...")
+                
+                # Temporarily mark as trained for evaluation
+                was_trained = self.is_trained
+                self.is_trained = True
+                
+                try:
+                    eval_results = self.evaluate(eval_env, n_episodes=10)
+                    avg_metrics.update({f"eval_{k}": v for k, v in eval_results.items()})
+                    
+                    # Log evaluation results
+                    self.logger.log_evaluation_results(
+                        results=eval_results,
+                        agent_id=self.__class__.__name__,
+                        env_id=getattr(eval_env, '__class__', {}).get('__name__', 'Unknown')
+                    )
+                finally:
+                    # Restore original training state
+                    self.is_trained = was_trained
                 
             # MLflow logging
             if use_mlflow:
@@ -150,9 +293,23 @@ class OfflineAgent(abc.ABC):
         self.is_trained = True
         self.training_metrics = epoch_metrics
         
+        self.logger.info(f"Training completed successfully after {n_epochs} epochs")
+        final_metrics = epoch_metrics[-1] if epoch_metrics else {}
+        if final_metrics:
+            self.logger.info(f"Final training metrics: {final_metrics}")
+        
+        # Generate optimization report
+        optimization_report = self.performance_optimizer.get_optimization_report()
+        self.logger.info(f"Applied optimizations: {optimization_report['total_optimizations']}")
+        
+        # Cleanup resources
+        if self.dataloader_optimizer:
+            self.dataloader_optimizer.cleanup()
+            
         return {
             "training_metrics": epoch_metrics,
             "final_metrics": epoch_metrics[-1] if epoch_metrics else {},
+            "optimization_report": optimization_report,
         }
     
     def evaluate(
