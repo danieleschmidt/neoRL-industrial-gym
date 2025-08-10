@@ -134,6 +134,26 @@ class SafetyCritic(nn.Module):
         return nn.sigmoid(x.squeeze(-1))
 
 
+class ValueFunction(nn.Module):
+    """Value function network for IQL."""
+    
+    hidden_dims: Sequence[int] = (256, 256)
+    activation: Callable = nn.relu
+    use_layer_norm: bool = False
+    dropout_rate: float = 0.0
+    
+    @nn.compact
+    def __call__(self, observations, training: bool = False):
+        x = MLP(
+            features=(*self.hidden_dims, 1),
+            activation=self.activation,
+            use_layer_norm=self.use_layer_norm,
+            dropout_rate=self.dropout_rate,
+        )(observations, training=training)
+        
+        return x.squeeze(-1)
+
+
 class TrainState(train_state.TrainState):
     """Extended train state with target parameters."""
     target_params: dict

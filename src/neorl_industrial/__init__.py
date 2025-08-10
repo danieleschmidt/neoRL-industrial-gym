@@ -6,8 +6,8 @@ except ImportError:
     __version__ = "unknown"
 
 from .core.types import DatasetQuality, SafetyConstraint, SafetyMetrics
-from .environments import IndustrialEnv, ChemicalReactorEnv
-from .agents import OfflineAgent, CQLAgent
+from .environments import IndustrialEnv, ChemicalReactorEnv, PowerGridEnv, RobotAssemblyEnv
+from .agents import OfflineAgent, CQLAgent, IQLAgent, TD3BCAgent
 from .utils import make, evaluate_with_safety
 
 __author__ = "Daniel Schmidt"
@@ -22,9 +22,13 @@ __all__ = [
     # Environments
     "IndustrialEnv",
     "ChemicalReactorEnv",
+    "PowerGridEnv",
+    "RobotAssemblyEnv",
     # Agents
     "OfflineAgent",
     "CQLAgent",
+    "IQLAgent",
+    "TD3BCAgent",
     # Utils
     "make",
     "evaluate_with_safety",
