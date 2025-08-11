@@ -91,7 +91,9 @@ class IndustrialLogger:
         
         # Metrics for logging performance
         self.start_time = time.time()
-        self.log_counts = {"DEBUG": 0, "INFO": 0, "WARNING": 0, "ERROR": 0, "CRITICAL": 0}
+        self.log_counts = {
+            "DEBUG": 0, "INFO": 0, "WARNING": 0, "ERROR": 0, "CRITICAL": 0
+        }
     
     def debug(self, msg: str, extra: Optional[Dict[str, Any]] = None) -> None:
         """Log debug message."""
@@ -105,11 +107,21 @@ class IndustrialLogger:
         """Log warning message."""
         self._log(logging.WARNING, msg, extra)
     
-    def error(self, msg: str, extra: Optional[Dict[str, Any]] = None, exc_info: bool = False) -> None:
+    def error(
+        self, 
+        msg: str, 
+        extra: Optional[Dict[str, Any]] = None, 
+        exc_info: bool = False
+    ) -> None:
         """Log error message."""
         self._log(logging.ERROR, msg, extra, exc_info=exc_info)
     
-    def critical(self, msg: str, extra: Optional[Dict[str, Any]] = None, exc_info: bool = False) -> None:
+    def critical(
+        self, 
+        msg: str, 
+        extra: Optional[Dict[str, Any]] = None, 
+        exc_info: bool = False
+    ) -> None:
         """Log critical message."""
         self._log(logging.CRITICAL, msg, extra, exc_info=exc_info)
     
@@ -172,7 +184,9 @@ class IndustrialLogger:
         
         msg += f" | {' | '.join(metric_strs)}"
         
-        self.info(msg, extra={"epoch": epoch, "metrics": metrics, "agent_id": agent_id})
+        self.info(
+            msg, extra={"epoch": epoch, "metrics": metrics, "agent_id": agent_id}
+        )
     
     def log_evaluation_results(
         self,
@@ -192,7 +206,10 @@ class IndustrialLogger:
         safety_violations = results.get("safety_violations", 0)
         success_rate = results.get("success_rate", 0)
         
-        msg += f" | Return: {return_mean:.2f} | Safety Violations: {safety_violations} | Success Rate: {success_rate:.1%}"
+        msg += (
+            f" | Return: {return_mean:.2f} | Safety Violations: {safety_violations} "
+            f"| Success Rate: {success_rate:.1%}"
+        )
         
         self.info(msg, extra={"results": results, "agent_id": agent_id, "env_id": env_id})
         
@@ -210,7 +227,13 @@ class IndustrialLogger:
                 env_id=env_id,
             )
     
-    def _log(self, level: int, msg: str, extra: Optional[Dict[str, Any]] = None, exc_info: bool = False) -> None:
+    def _log(
+        self, 
+        level: int, 
+        msg: str, 
+        extra: Optional[Dict[str, Any]] = None, 
+        exc_info: bool = False
+    ) -> None:
         """Internal logging method."""
         level_name = logging.getLevelName(level)
         self.log_counts[level_name] += 1
@@ -242,7 +265,9 @@ class IndustrialLogger:
         return {
             "runtime_seconds": runtime,
             "log_counts": self.log_counts.copy(),
-            "logs_per_second": sum(self.log_counts.values()) / max(runtime, 1),
+            "logs_per_second": (
+                sum(self.log_counts.values()) / max(runtime, 1)
+            ),
         }
 
 

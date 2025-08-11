@@ -78,7 +78,9 @@ class AlertRule:
     message_template: str
     cooldown_seconds: float = 300.0  # 5 minutes default cooldown
     max_alerts_per_hour: int = 10
-    metadata_extractor: Optional[Callable[[Dict[str, Any]], Dict[str, Any]]] = None
+    metadata_extractor: Optional[
+        Callable[[Dict[str, Any]], Dict[str, Any]]
+    ] = None
     
     def __post_init__(self):
         self._last_triggered = 0.0
@@ -178,7 +180,9 @@ class AlertManager:
             condition=lambda data: data.get("safety_violations", 0) > 0,
             alert_type=AlertType.SAFETY_VIOLATION,
             severity=AlertSeverity.CRITICAL,
-            message_template="Critical safety violation detected: {safety_violations} violations",
+            message_template=(
+                "Critical safety violation detected: {safety_violations} violations"
+            ),
             cooldown_seconds=60.0,  # Shorter cooldown for safety
             metadata_extractor=lambda data: {
                 "violation_count": data.get("safety_violations", 0),
@@ -209,12 +213,17 @@ class AlertManager:
             ),
             alert_type=AlertType.PERFORMANCE_DEGRADATION,
             severity=AlertSeverity.WARNING,
-            message_template="Performance degradation detected: {current_performance:.2f} vs baseline {baseline_performance:.2f}",
+            message_template=(
+                "Performance degradation detected: {current_performance:.2f} vs "
+                "baseline {baseline_performance:.2f}"
+            ),
             cooldown_seconds=600.0,  # 10 minutes
             metadata_extractor=lambda data: {
                 "degradation_percent": (
-                    (data.get("baseline_performance", 1) - data.get("current_performance", 0)) / 
-                    data.get("baseline_performance", 1) * 100
+                    (
+                        data.get("baseline_performance", 1) - 
+                        data.get("current_performance", 0)
+                    ) / data.get("baseline_performance", 1) * 100
                 ),
             },
         ))
@@ -225,7 +234,9 @@ class AlertManager:
             condition=lambda data: data.get("memory_usage_percent", 0) > 90,
             alert_type=AlertType.RESOURCE_EXHAUSTION,
             severity=AlertSeverity.CRITICAL,
-            message_template="High memory usage detected: {memory_usage_percent:.1f}%",
+            message_template=(
+                "High memory usage detected: {memory_usage_percent:.1f}%"
+            ),
             cooldown_seconds=300.0,
         ))
         
@@ -239,7 +250,10 @@ class AlertManager:
             ),
             alert_type=AlertType.DATA_QUALITY,
             severity=AlertSeverity.WARNING,
-            message_template="Data quality issue: NaN={nan_count}, Inf={inf_count}, Low variance={data_variance:.2e}",
+            message_template=(
+                "Data quality issue: NaN={nan_count}, Inf={inf_count}, "
+                "Low variance={data_variance:.2e}"
+            ),
             metadata_extractor=lambda data: {
                 "dataset_size": data.get("dataset_size", 0),
                 "affected_features": data.get("affected_features", []),
@@ -288,7 +302,9 @@ class AlertManager:
         
         # Limit history size
         if len(self.alert_history) > self.max_alerts_stored:
-            self.alert_history = self.alert_history[-self.max_alerts_stored:]
+            self.alert_history = (
+                self.alert_history[-self.max_alerts_stored:]
+            )
         
         # Update statistics
         self.stats["total_alerts"] += 1
@@ -327,11 +343,14 @@ class AlertManager:
                 # Update resolution time statistics
                 resolution_time = alert.resolution_time - alert.timestamp
                 current_avg = self.stats["avg_resolution_time"]
-                total_resolved = sum(1 for a in self.alert_history if a.resolved)
+                total_resolved = sum(
+                    1 for a in self.alert_history if a.resolved
+                )
                 
                 if total_resolved > 0:
                     self.stats["avg_resolution_time"] = (
-                        (current_avg * (total_resolved - 1) + resolution_time) / total_resolved
+                        (current_avg * (total_resolved - 1) + resolution_time) / 
+                        total_resolved
                     )
                 
                 # Remove from active alerts
@@ -413,8 +432,12 @@ class AlertManager:
             alerts_data = {
                 "export_timestamp": time.time(),
                 "statistics": self.get_statistics(),
-                "active_alerts": [alert.to_dict() for alert in self.active_alerts.values()],
-                "alert_history": [alert.to_dict() for alert in self.alert_history],
+                "active_alerts": [
+                    alert.to_dict() for alert in self.active_alerts.values()
+                ],
+                "alert_history": [
+                    alert.to_dict() for alert in self.alert_history
+                ],
             }
             
             with open(filename, 'w') as f:
@@ -422,7 +445,11 @@ class AlertManager:
             
             self.logger.info(f"Alerts exported to {filename}")
     
-    def start_monitoring(self, data_source: Callable[[], Dict[str, Any]], interval: float = 60.0):
+    def start_monitoring(
+        self, 
+        data_source: Callable[[], Dict[str, Any]], 
+        interval: float = 60.0
+    ):
         """Start continuous monitoring with a data source.
         
         Args:
@@ -476,7 +503,9 @@ def console_notification_handler(alert: Alert):
     reset_color = "\033[0m"
     color = severity_colors.get(alert.severity, "")
     
-    print(f"{color}[{alert.severity.value.upper()}] {alert.message}{reset_color}")
+    print(
+        f"{color}[{alert.severity.value.upper()}] {alert.message}{reset_color}"
+    )
     print(f"  Alert ID: {alert.id}")
     print(f"  Type: {alert.type.value}")
     print(f"  Time: {time.ctime(alert.timestamp)}")
@@ -496,7 +525,10 @@ def file_notification_handler(log_file: str):
     """
     def handler(alert: Alert):
         with open(log_file, 'a') as f:
-            f.write(f"{time.ctime(alert.timestamp)} | {alert.severity.value.upper()} | {alert.message}\n")
+            f.write(
+                f"{time.ctime(alert.timestamp)} | {alert.severity.value.upper()} | "
+                f"{alert.message}\n"
+            )
             f.write(f"  ID: {alert.id} | Type: {alert.type.value}\n")
             if alert.metadata:
                 f.write(f"  Metadata: {json.dumps(alert.metadata)}\n")
@@ -515,5 +547,7 @@ def get_alert_manager() -> AlertManager:
     if _alert_manager is None:
         _alert_manager = AlertManager()
         # Add default console handler
-        _alert_manager.add_notification_handler(console_notification_handler)
+        _alert_manager.add_notification_handler(
+            console_notification_handler
+        )
     return _alert_manager

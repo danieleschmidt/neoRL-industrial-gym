@@ -302,7 +302,11 @@ class AutoTuner:
                 )
                 
                 if is_better:
-                    improvement = abs(score - best_score) if best_score != float('inf') and best_score != float('-inf') else float('inf')
+                    improvement = (
+                        abs(score - best_score) 
+                        if best_score != float('inf') and best_score != float('-inf') 
+                        else float('inf')
+                    )
                     
                     if improvement > self.config.min_improvement:
                         best_score = score

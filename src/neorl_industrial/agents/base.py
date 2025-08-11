@@ -72,7 +72,10 @@ class OfflineAgent(abc.ABC):
         self.performance_optimizer = get_performance_optimizer()
         self.dataloader_optimizer = None  # Initialize on demand
         
-        self.logger.info(f"Initialized agent: state_dim={state_dim}, action_dim={action_dim}, safety_critic={safety_critic}")
+        self.logger.info(
+            f"Initialized agent: state_dim={state_dim}, "
+            f"action_dim={action_dim}, safety_critic={safety_critic}"
+        )
         self.performance_monitor.start_monitoring()
         
     @abc.abstractmethod
@@ -110,7 +113,10 @@ class OfflineAgent(abc.ABC):
                 # Batch of observations
                 expected_shape = None  # Don't validate batch dimension
             else:
-                raise SecurityError(f"Invalid observation shape: {observations.shape}, expected (..., {self.state_dim})")
+                raise SecurityError(
+                    f"Invalid observation shape: {observations.shape}, "
+                    f"expected (..., {self.state_dim})"
+                )
                 
             self.security_manager.validate_input_array(
                 observations,
@@ -177,7 +183,10 @@ class OfflineAgent(abc.ABC):
         
         # Validate shapes
         if dataset['observations'].shape[1] != self.state_dim:
-            raise ValueError(f"Observation dim mismatch: got {dataset['observations'].shape[1]}, expected {self.state_dim}")
+            raise ValueError(
+                f"Observation dim mismatch: got {dataset['observations'].shape[1]}, "
+                f"expected {self.state_dim}"
+            )
         if dataset['actions'].shape[1] != self.action_dim:
             raise ValueError(f"Action dim mismatch: got {dataset['actions'].shape[1]}, expected {self.action_dim}")
         

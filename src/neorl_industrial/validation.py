@@ -87,7 +87,10 @@ class DataValidator:
                     if arr.shape[1:] != expected_shape[1:]:
                         return ValidationResult(
                             is_valid=False,
-                            error_message=f"{name}: Shape mismatch - got {arr.shape}, expected (..., {expected_shape[1:]})"
+                            error_message=(
+                                f"{name}: Shape mismatch - got {arr.shape}, "
+                                f"expected (..., {expected_shape[1:]})"
+                            )
                         )
                 elif len(expected_shape) == 1 and len(arr.shape) <= 2:
                     # Allow both (N,) and (batch, N) shapes
@@ -99,7 +102,10 @@ class DataValidator:
                     elif len(arr.shape) == 2 and arr.shape[1] != expected_shape[0]:
                         return ValidationResult(
                             is_valid=False,
-                            error_message=f"{name}: Shape mismatch - got {arr.shape}, expected (batch, {expected_shape[0]})"
+                            error_message=(
+                                f"{name}: Shape mismatch - got {arr.shape}, "
+                                f"expected (batch, {expected_shape[0]})"
+                            )
                         )
                 else:
                     if arr.shape != expected_shape:

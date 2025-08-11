@@ -231,7 +231,13 @@ class PerformanceOptimizer:
         }
 
 
-def benchmark_function(func: Callable, *args, warmup_runs: int = 5, benchmark_runs: int = 10, **kwargs) -> Dict[str, float]:
+def benchmark_function(
+    func: Callable, 
+    *args, 
+    warmup_runs: int = 5, 
+    benchmark_runs: int = 10, 
+    **kwargs
+) -> Dict[str, float]:
     """Benchmark function performance.
     
     Args:

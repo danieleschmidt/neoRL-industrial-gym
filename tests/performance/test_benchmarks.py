@@ -18,7 +18,11 @@ from tests.conftest import sample_trajectory_data, benchmark_config
 class TestPerformanceBenchmarks:
     """Performance benchmark test suite."""
 
-    def test_training_performance(self, sample_trajectory_data: Dict[str, np.ndarray], benchmark_config: Dict[str, Any]):
+    def test_training_performance(
+        self, 
+        sample_trajectory_data: Dict[str, np.ndarray], 
+        benchmark_config: Dict[str, Any]
+    ):
         """Test training performance meets industrial requirements."""
         # Mock agent for performance testing
         mock_agent = Mock()
@@ -74,7 +78,9 @@ class TestPerformanceBenchmarks:
         
         # Create larger dataset
         large_dataset = {
-            key: np.tile(data, (large_dataset_size // len(data) + 1, 1))[:large_dataset_size]
+            key: np.tile(
+                data, (large_dataset_size // len(data) + 1, 1)
+            )[:large_dataset_size]
             for key, data in sample_trajectory_data.items()
         }
         
@@ -94,8 +100,11 @@ class TestPerformanceBenchmarks:
         memory_increase = peak_memory - initial_memory
         
         # Memory increase should be reasonable for dataset size
-        expected_memory_mb = (large_dataset_size * 4 * 10) / 1024 / 1024  # Rough estimate
-        assert memory_increase < expected_memory_mb * 2, f"Memory usage {memory_increase:.2f}MB too high"
+        # Rough estimate  
+        expected_memory_mb = (large_dataset_size * 4 * 10) / 1024 / 1024
+        assert memory_increase < expected_memory_mb * 2, (
+            f"Memory usage {memory_increase:.2f}MB too high"
+        )
 
     def test_concurrent_environments(self, mock_environment_config: Dict[str, Any]):
         """Test performance with multiple concurrent environments."""
@@ -106,7 +115,9 @@ class TestPerformanceBenchmarks:
         mock_environments = []
         for _ in range(num_environments):
             mock_env = Mock()
-            mock_env.reset = Mock(return_value=(np.random.randn(mock_environment_config["state_dim"]), {}))
+            mock_env.reset = Mock(return_value=(
+                np.random.randn(mock_environment_config["state_dim"]), {}
+            ))
             mock_env.step = Mock(return_value=(
                 np.random.randn(mock_environment_config["state_dim"]),  # observation
                 np.random.randn(),  # reward
@@ -133,9 +144,15 @@ class TestPerformanceBenchmarks:
         
         # Should maintain reasonable throughput
         episodes_per_second = total_episodes / elapsed_time
-        assert episodes_per_second > 1.0, f"Episode throughput {episodes_per_second:.2f} eps/s too low"
+        assert episodes_per_second > 1.0, (
+            f"Episode throughput {episodes_per_second:.2f} eps/s too low"
+        )
 
-    def test_safety_monitoring_overhead(self, safety_constraints: List, sample_trajectory_data: Dict[str, np.ndarray]):
+    def test_safety_monitoring_overhead(
+        self, 
+        safety_constraints: List, 
+        sample_trajectory_data: Dict[str, np.ndarray]
+    ):
         """Test that safety monitoring doesn't significantly impact performance."""
         states = sample_trajectory_data["observations"][:1000]
         
@@ -163,7 +180,9 @@ class TestPerformanceBenchmarks:
         
         # Safety monitoring overhead should be minimal
         overhead_ratio = (safety_time - baseline_time) / baseline_time
-        assert overhead_ratio < 0.1, f"Safety monitoring overhead {overhead_ratio:.2%} too high"
+        assert overhead_ratio < 0.1, (
+            f"Safety monitoring overhead {overhead_ratio:.2%} too high"
+        )
 
     @pytest.mark.slow
     def test_scalability_stress(self):
@@ -195,10 +214,14 @@ class TestPerformanceBenchmarks:
             
             # Memory check
             memory_usage = psutil.Process().memory_info().rss / 1024 / 1024
-            assert memory_usage < 2048, f"Memory usage {memory_usage:.1f}MB too high for batch size {batch_size}"
+            assert memory_usage < 2048, (
+                f"Memory usage {memory_usage:.1f}MB too high for batch size {batch_size}"
+            )
         
         # Performance should scale reasonably with batch size
-        assert performance_results[1024] > performance_results[64], "Performance should improve with larger batches"
+        assert performance_results[1024] > performance_results[64], (
+            "Performance should improve with larger batches"
+        )
 
     def test_environment_reset_performance(self, mock_environment_config: Dict[str, Any]):
         """Test environment reset performance for rapid experimentation."""
@@ -218,7 +241,9 @@ class TestPerformanceBenchmarks:
         resets_per_second = num_resets / elapsed_time
         
         # Should support rapid environment resets for hyperparameter search
-        assert resets_per_second > 10.0, f"Reset rate {resets_per_second:.1f} resets/s too slow"
+        assert resets_per_second > 10.0, (
+            f"Reset rate {resets_per_second:.1f} resets/s too slow"
+        )
 
 
 @pytest.mark.performance
@@ -245,7 +270,9 @@ class TestAlgorithmPerformance:
         start_time = time.perf_counter()
         
         for _ in range(num_updates):
-            batch_indices = np.random.choice(len(sample_trajectory_data["observations"]), batch_size)
+            batch_indices = np.random.choice(
+                len(sample_trajectory_data["observations"]), batch_size
+            )
             batch = {
                 key: data[batch_indices] for key, data in sample_trajectory_data.items()
             }
@@ -256,7 +283,9 @@ class TestAlgorithmPerformance:
         updates_per_second = num_updates / elapsed_time
         
         # CQL should maintain reasonable update frequency
-        assert updates_per_second > 1.0, f"CQL update rate {updates_per_second:.1f} updates/s too slow"
+        assert updates_per_second > 1.0, (
+            f"CQL update rate {updates_per_second:.1f} updates/s too slow"
+        )
 
     def test_safety_critic_overhead(self, sample_trajectory_data: Dict[str, np.ndarray]):
         """Test performance impact of safety critic."""
@@ -284,8 +313,12 @@ class TestAlgorithmPerformance:
         evaluations_per_second = len(states) / elapsed_time
         
         # Safety critic should not significantly slow down inference
-        assert evaluations_per_second > 100.0, f"Safety evaluation rate {evaluations_per_second:.1f} eval/s too slow"
+        assert evaluations_per_second > 100.0, (
+            f"Safety evaluation rate {evaluations_per_second:.1f} eval/s too slow"
+        )
         
         # Should detect some unsafe actions
         safety_rate = np.mean(safety_results)
-        assert 0.8 <= safety_rate <= 0.99, f"Safety rate {safety_rate:.2%} unexpected"
+        assert 0.8 <= safety_rate <= 0.99, (
+            f"Safety rate {safety_rate:.2%} unexpected"
+        )

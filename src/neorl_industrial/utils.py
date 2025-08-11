@@ -137,7 +137,10 @@ def evaluate_with_safety(
         'safety_violations_per_episode': total_violations / n_episodes,
         'critical_violations': critical_violations,
         'emergency_shutdowns': emergency_shutdowns,
-        'constraint_satisfaction_rate': np.mean(constraint_satisfaction_rates) if constraint_satisfaction_rates else 1.0,
+        'constraint_satisfaction_rate': (
+            np.mean(constraint_satisfaction_rates) 
+            if constraint_satisfaction_rates else 1.0
+        ),
         
         # Success metrics
         'successful_episodes': sum(1 for r in episode_returns if r > 0),
