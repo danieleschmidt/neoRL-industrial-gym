@@ -29,12 +29,18 @@ def check_file_security(filepath: Path) -> Dict[str, Any]:
             (r'input\s*\(.*\)', 'User input without validation', 'LOW'),
             (r'open\s*\([^,]*,.*["\']w', 'File write without validation', 'LOW'),
             (r'random\.seed\s*\(\d+\)', 'Hardcoded random seed', 'LOW'),
-            (r'password\s*=\s*["\'][^"\'
-]+["\']', 'Hardcoded password', 'HIGH'),
-            (r'api[_-]?key\s*=\s*["\'][^"\'
-]+["\']', 'Hardcoded API key', 'HIGH'),
-            (r'secret\s*=\s*["\'][^"\'
-]+["\']', 'Hardcoded secret', 'HIGH'),
+            (
+                r'password\s*=\s*["\'][^"\']+["\']', 
+                'Hardcoded password', 'HIGH'
+            ),
+            (
+                r'api[_-]?key\s*=\s*["\'][^"\']+["\']', 
+                'Hardcoded API key', 'HIGH'
+            ),
+            (
+                r'secret\s*=\s*["\'][^"\']+["\']', 
+                'Hardcoded secret', 'HIGH'
+            ),
         ]
         
         for pattern, message, severity in security_patterns:
@@ -89,11 +95,16 @@ def check_file_security(filepath: Path) -> Dict[str, Any]:
                     
                     elif isinstance(node.func, ast.Attribute):
                         # Check for subprocess with shell=True
-                        if (hasattr(node.func, 'attr') and 
+                        if (
+                            hasattr(node.func, 'attr') and 
                             node.func.attr in ['call', 'run', 'Popen'] and
-                            any(isinstance(kw.value, ast.Constant) and 
-                                kw.value.value is True and kw.arg == 'shell' 
-                                for kw in node.keywords)):
+                            any(
+                                isinstance(kw.value, ast.Constant) and 
+                                kw.value.value is True and 
+                                kw.arg == 'shell' 
+                                for kw in node.keywords
+                            )
+                        ):
                             self.issues.append({
                                 'type': 'shell_injection',
                                 'severity': 'HIGH', 
@@ -105,14 +116,18 @@ def check_file_security(filepath: Path) -> Dict[str, Any]:
                 
                 def visit_Assign(self, node):
                     # Check for hardcoded secrets in assignments
-                    if (isinstance(node.value, ast.Constant) and 
-                        isinstance(node.value.value, str)):
+                    if (
+                        isinstance(node.value, ast.Constant) and 
+                        isinstance(node.value.value, str)
+                    ):
                         
                         for target in node.targets:
                             if isinstance(target, ast.Name):
                                 var_name = target.id.lower()
-                                if any(secret in var_name for secret in 
-                                      ['password', 'secret', 'key', 'token']):
+                                if any(
+                                    secret in var_name 
+                                    for secret in ['password', 'secret', 'key', 'token']
+                                ):
                                     self.issues.append({
                                         'type': 'hardcoded_secret',
                                         'severity': 'HIGH',
@@ -190,14 +205,10 @@ def check_configuration_security() -> List[Dict[str, Any]]:
                 
                 # Check for secrets in config
                 secret_patterns = [
-                    r'password\s*[:=]\s*["\'][^"\'
-]{3,}["\']',
-                    r'secret\s*[:=]\s*["\'][^"\'
-]{3,}["\']',
-                    r'api[_-]?key\s*[:=]\s*["\'][^"\'
-]{3,}["\']',
-                    r'token\s*[:=]\s*["\'][^"\'
-]{8,}["\']',
+                    r'password\s*[:=]\s*["\'][^"\']{3,}["\']',
+                    r'secret\s*[:=]\s*["\'][^"\']{3,}["\']',
+                    r'api[_-]?key\s*[:=]\s*["\'][^"\']{3,}["\']',
+                    r'token\s*[:=]\s*["\'][^"\']{8,}["\']',
                 ]
                 
                 for pattern in secret_patterns:
@@ -356,7 +367,11 @@ def generate_security_report() -> Dict[str, Any]:
     medium_issues = report['summary']['medium_severity']
     
     # Security score calculation (100 - weighted penalty)
-    penalty = (high_issues * 10) + (medium_issues * 3) + (report['summary']['low_severity'] * 1)
+    penalty = (
+        (high_issues * 10) + 
+        (medium_issues * 3) + 
+        (report['summary']['low_severity'] * 1)
+    )
     security_score = max(0, 100 - penalty)
     
     report['security_score'] = security_score
@@ -401,7 +416,9 @@ def main():
         for file_report in report['file_analysis']:
             for issue in file_report['issues']:
                 if issue['severity'] == 'HIGH' and count < 5:
-                    print(f"   📄 {file_report['file']}:{issue.get('line', '?')} - {issue['message']}")
+                    print(
+                        f"   📄 {file_report['file']}:{issue.get('line', '?')} - {issue['message']}"
+                    )
                     count += 1
         
         for issue in report['configuration_security']:
@@ -411,7 +428,10 @@ def main():
     
     # Dependencies summary
     dep_info = report['dependency_security']
-    print(f"\n📦 Dependencies: {dep_info['total_dependencies']} total, {dep_info['vulnerable_count']} potentially vulnerable")
+    print(
+        f"\n📦 Dependencies: {dep_info['total_dependencies']} total, "
+        f"{dep_info['vulnerable_count']} potentially vulnerable"
+    )
     
     print(f"\n📋 Detailed report saved to: security_validation_report.json")
     

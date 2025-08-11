@@ -403,7 +403,10 @@ class MemoryOptimizer:
             # Set memory fraction
             os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = str(self.config.jax_memory_fraction)
             
-            self.logger.info(f"JAX memory configured: preallocation={self.config.enable_jax_memory_preallocation}, fraction={self.config.jax_memory_fraction}")
+            self.logger.info(
+                f"JAX memory configured: preallocation={self.config.enable_jax_memory_preallocation}, "
+                f"fraction={self.config.jax_memory_fraction}"
+            )
         except Exception as e:
             self.logger.warning(f"Failed to configure JAX memory: {e}")
     

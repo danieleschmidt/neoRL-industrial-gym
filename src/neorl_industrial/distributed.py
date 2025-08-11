@@ -6,7 +6,9 @@ import time
 import threading
 from typing import Any, Dict, List, Optional, Callable
 from dataclasses import dataclass, asdict
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
+from concurrent.futures import (
+    ThreadPoolExecutor, ProcessPoolExecutor, as_completed
+)
 import logging
 
 try:
@@ -56,14 +58,18 @@ class DistributedTrainingManager:
                     ray.init(ignore_reinit_error=True)
                 self.logger.info("Ray backend initialized")
             except Exception as e:
-                self.logger.warning(f"Ray initialization failed: {e}, falling back to threading")
+                self.logger.warning(
+                    f"Ray initialization failed: {e}, falling back to threading"
+                )
                 self.config.worker_type = "thread"
         elif self.config.worker_type == "ray" and not RAY_AVAILABLE:
             self.logger.warning("Ray not available, falling back to threading")
             self.config.worker_type = "thread"
         
         self.is_initialized = True
-        self.logger.info(f"Distributed training initialized with {self.config.worker_type} backend")
+        self.logger.info(
+            f"Distributed training initialized with {self.config.worker_type} backend"
+        )
     
     def create_worker_pool(self, worker_fn: Callable, worker_args: List[Any]):
         """Create a pool of workers for distributed training.
@@ -107,7 +113,9 @@ class DistributedTrainingManager:
         if not self.is_initialized:
             raise RuntimeError("Distributed manager not initialized")
         
-        self.logger.info(f"Starting distributed training with {len(agent_configs)} agents")
+        self.logger.info(
+            f"Starting distributed training with {len(agent_configs)} agents"
+        )
         
         start_time = time.time()
         
@@ -116,7 +124,9 @@ class DistributedTrainingManager:
         
         # Create training tasks
         training_tasks = []
-        for i, (config, worker_dataset) in enumerate(zip(agent_configs, worker_datasets)):
+        for i, (config, worker_dataset) in enumerate(
+            zip(agent_configs, worker_datasets)
+        ):
             task_config = {
                 "worker_id": i,
                 "agent_class": agent_class,
@@ -140,7 +150,9 @@ class DistributedTrainingManager:
         
         return final_results
     
-    def _split_dataset(self, dataset: Dict[str, Array], n_splits: int) -> List[Dict[str, Array]]:
+    def _split_dataset(
+        self, dataset: Dict[str, Array], n_splits: int
+    ) -> List[Dict[str, Array]]:
         """Split dataset into chunks for workers."""
         import numpy as np
         
@@ -162,11 +174,15 @@ class DistributedTrainingManager:
             
             worker_datasets.append(worker_dataset)
             
-            self.logger.debug(f"Worker {i} dataset: {len(worker_dataset['observations'])} samples")
+            self.logger.debug(
+                f"Worker {i} dataset: {len(worker_dataset['observations'])} samples"
+            )
         
         return worker_datasets
     
-    def _train_with_executor(self, training_tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _train_with_executor(
+        self, training_tasks: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
         """Train using ThreadPoolExecutor or ProcessPoolExecutor."""
         futures = []
         
@@ -187,7 +203,9 @@ class DistributedTrainingManager:
         
         return results
     
-    def _train_with_ray(self, training_tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _train_with_ray(
+        self, training_tasks: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
         """Train using Ray distributed computing."""
         if not RAY_AVAILABLE:
             raise RuntimeError("Ray not available")
@@ -197,7 +215,9 @@ class DistributedTrainingManager:
             return self._train_worker(task_config)
         
         # Submit tasks
-        futures = [train_worker_ray.remote(task) for task in training_tasks]
+        futures = [
+            train_worker_ray.remote(task) for task in training_tasks
+        ]
         
         # Collect results
         results = ray.get(futures)
@@ -243,11 +263,19 @@ class DistributedTrainingManager:
         total_time: float
     ) -> Dict[str, Any]:
         """Aggregate results from all workers."""
-        successful_workers = [r for r in worker_results if r.get("success", False)]
-        failed_workers = [r for r in worker_results if not r.get("success", False)]
+        successful_workers = [
+            r for r in worker_results if r.get("success", False)
+        ]
+        failed_workers = [
+            r for r in worker_results if not r.get("success", False)
+        ]
         
-        total_training_time = sum(r.get("training_time", 0) for r in successful_workers)
-        avg_training_time = total_training_time / len(successful_workers) if successful_workers else 0
+        total_training_time = sum(
+            r.get("training_time", 0) for r in successful_workers
+        )
+        avg_training_time = (
+            total_training_time / len(successful_workers) if successful_workers else 0
+        )
         
         # Aggregate training metrics
         all_metrics = []
@@ -256,8 +284,12 @@ class DistributedTrainingManager:
                 all_metrics.extend(result["results"]["training_metrics"])
         
         # Calculate speedup
-        estimated_sequential_time = sum(r.get("training_time", 0) for r in successful_workers)
-        speedup = estimated_sequential_time / total_time if total_time > 0 else 1.0
+        estimated_sequential_time = sum(
+            r.get("training_time", 0) for r in successful_workers
+        )
+        speedup = (
+            estimated_sequential_time / total_time if total_time > 0 else 1.0
+        )
         
         aggregated_results = {
             "total_workers": len(worker_results),
@@ -273,7 +305,10 @@ class DistributedTrainingManager:
         
         if failed_workers:
             aggregated_results["failures"] = [
-                {"worker_id": r["worker_id"], "error": r.get("error", "Unknown error")}
+                {
+                    "worker_id": r["worker_id"], 
+                    "error": r.get("error", "Unknown error")
+                }
                 for r in failed_workers
             ]
         
@@ -330,7 +365,11 @@ class ParameterServer:
         with self._lock:
             return self.version
     
-    def average_parameters(self, param_list: List[Dict[str, Any]], weights: Optional[List[float]] = None) -> Dict[str, Any]:
+    def average_parameters(
+        self, 
+        param_list: List[Dict[str, Any]], 
+        weights: Optional[List[float]] = None
+    ) -> Dict[str, Any]:
         """Average parameters from multiple workers."""
         if not param_list:
             return {}
@@ -359,9 +398,11 @@ class ParameterServer:
                     valid_weights.append(weight)
             
             if values:
-                # Simple averaging for now (would need more sophisticated logic for JAX params)
+                # Simple averaging for now (sophisticated logic for JAX params)
                 if isinstance(values[0], (int, float)):
-                    averaged_params[key] = sum(v * w for v, w in zip(values, valid_weights))
+                    averaged_params[key] = sum(
+                        v * w for v, w in zip(values, valid_weights)
+                    )
                 else:
                     # For complex parameters, just use the first valid value
                     averaged_params[key] = values[0]
