@@ -10,6 +10,16 @@ from .environments import IndustrialEnv, ChemicalReactorEnv, PowerGridEnv, Robot
 from .agents import OfflineAgent, CQLAgent, IQLAgent, TD3BCAgent
 from .utils import make, evaluate_with_safety
 
+# Progressive Quality Gates (Generation 4 Enhancement)
+from .quality_gates import (
+    ProgressiveQualityMonitor,
+    QualityMetrics,
+    QualityThresholds, 
+    QualityGateExecutor,
+    RealTimeQualityMonitor,
+    AdaptiveQualityGates
+)
+
 __author__ = "Daniel Schmidt"
 __email__ = "daniel@terragon.ai"
 
@@ -32,4 +42,11 @@ __all__ = [
     # Utils
     "make",
     "evaluate_with_safety",
+    # Progressive Quality Gates
+    "ProgressiveQualityMonitor",
+    "QualityMetrics",
+    "QualityThresholds",
+    "QualityGateExecutor",
+    "RealTimeQualityMonitor",
+    "AdaptiveQualityGates",
 ]

@@ -98,7 +98,10 @@ class GDPRDataManager:
         with self._lock:
             # Check consent if required
             if consent_required and not self._has_valid_consent(data_subject_id, processing_purpose):
-                raise ValueError(f"No valid consent for data subject {data_subject_id} and purpose {processing_purpose}")
+                raise ValueError(
+                    f"No valid consent for data subject {data_subject_id} "
+                    f"and purpose {processing_purpose}"
+                )
             
             # Create data record
             record = DataRecord(

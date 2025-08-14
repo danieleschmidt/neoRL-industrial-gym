@@ -267,7 +267,10 @@ class SafetyConstraintValidator(BaseValidator):
             else:
                 is_valid = False
                 confidence = max(0.1, 1.0 - total_violation_rate)
-                error_message = f"Safety violation rate {total_violation_rate:.2%} exceeds tolerance {self.tolerance:.2%}"
+                error_message = (
+                    f"Safety violation rate {total_violation_rate:.2%} "
+                    f"exceeds tolerance {self.tolerance:.2%}"
+                )
             
             if is_valid:
                 self.success_count += 1
