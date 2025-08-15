@@ -319,9 +319,18 @@ class DistributedTrainer:
     def get_performance_stats(self) -> Dict[str, Any]:
         """Get performance statistics."""
         return {
-            "avg_step_time": np.mean(self.training_metrics["step_times"]) if self.training_metrics["step_times"] else 0.0,
-            "avg_throughput": np.mean(self.training_metrics["throughput"]) if self.training_metrics["throughput"] else 0.0,
-            "max_throughput": np.max(self.training_metrics["throughput"]) if self.training_metrics["throughput"] else 0.0,
+            "avg_step_time": (
+                np.mean(self.training_metrics["step_times"])
+                if self.training_metrics["step_times"] else 0.0
+            ),
+            "avg_throughput": (
+                np.mean(self.training_metrics["throughput"])
+                if self.training_metrics["throughput"] else 0.0
+            ),
+            "max_throughput": (
+                np.max(self.training_metrics["throughput"])
+                if self.training_metrics["throughput"] else 0.0
+            ),
             "device_count": self.config.num_devices,
             "effective_batch_size": self.config.batch_size_per_device * self.config.num_devices,
         }
@@ -379,7 +388,10 @@ class AdaptiveBatchSizeOptimizer:
                 self.min_batch_size,
                 int(self.current_batch_size * 0.8)
             )
-            self.logger.info(f"Reducing batch size due to memory pressure: {self.current_batch_size} -> {new_batch_size}")
+            self.logger.info(
+                f"Reducing batch size due to memory pressure: "
+                f"{self.current_batch_size} -> {new_batch_size}"
+            )
         
         elif recent_memory < self.target_memory_utilization and recent_throughput >= self.best_throughput * 0.95:
             # Increase batch size to utilize more memory
@@ -387,7 +399,10 @@ class AdaptiveBatchSizeOptimizer:
                 self.max_batch_size,
                 int(self.current_batch_size * 1.2)
             )
-            self.logger.info(f"Increasing batch size for better utilization: {self.current_batch_size} -> {new_batch_size}")
+            self.logger.info(
+                f"Increasing batch size for better utilization: "
+                f"{self.current_batch_size} -> {new_batch_size}"
+            )
         
         elif recent_throughput < self.best_throughput * 0.9:
             # Performance degradation, revert to best known
@@ -407,7 +422,10 @@ class AdaptiveBatchSizeOptimizer:
             "current_batch_size": self.current_batch_size,
             "best_batch_size": self.best_batch_size,
             "best_throughput": self.best_throughput,
-            "recent_throughput": np.mean(list(self.throughput_history)[-5:]) if len(self.throughput_history) >= 5 else 0.0,
+            "recent_throughput": (
+                np.mean(list(self.throughput_history)[-5:])
+                if len(self.throughput_history) >= 5 else 0.0
+            ),
             "recent_memory": np.mean(list(self.memory_history)[-5:]) if len(self.memory_history) >= 5 else 0.0,
             "measurements": len(self.throughput_history),
         }
