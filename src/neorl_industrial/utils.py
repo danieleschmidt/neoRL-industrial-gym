@@ -4,6 +4,8 @@ import numpy as np
 from typing import Dict, Any, Optional
 
 from .environments import ChemicalReactorEnv, PowerGridEnv, RobotAssemblyEnv
+from .environments.advanced_chemical_reactor import AdvancedChemicalReactorEnv
+from .environments.advanced_power_grid import AdvancedPowerGridEnv
 from .core.types import Array
 
 
@@ -25,6 +27,8 @@ def make(env_id: str, **kwargs) -> Any:
         'ChemicalReactor-v0': ChemicalReactorEnv,
         'PowerGrid-v0': PowerGridEnv,
         'RobotAssembly-v0': RobotAssemblyEnv,
+        'AdvancedChemicalReactor-v0': AdvancedChemicalReactorEnv,
+        'AdvancedPowerGrid-v0': AdvancedPowerGridEnv,
     }
     
     if env_id not in env_registry:
