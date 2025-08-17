@@ -270,10 +270,13 @@ class PerformanceBenchmark(IndustrialBenchmark):
             # Check for convergence
             if not converged and len(performance_history) >= convergence_window:
                 recent_performance = performance_history[-convergence_window:]
-                early_performance = performance_history[-convergence_window-5:-5] if len(performance_history) >= convergence_window + 5 else recent_performance[:5]
+                early_performance = (performance_history[-convergence_window-5:-5] 
+                                    if len(performance_history) >= convergence_window + 5 
+                                    else recent_performance[:5])
                 
                 if len(early_performance) > 0:
-                    improvement = (np.mean(recent_performance) - np.mean(early_performance)) / abs(np.mean(early_performance) + 1e-8)
+                    improvement = ((np.mean(recent_performance) - np.mean(early_performance)) / 
+                                  abs(np.mean(early_performance) + 1e-8))
                     
                     if abs(improvement) < convergence_threshold:
                         convergence_episodes.append(episode)
