@@ -151,4 +151,63 @@ Infrastructure      │ Hardware Interfaces → Real Systems
 - **Adversarial Robustness**: Protection against input perturbations
 - **Explainability**: Interpretable decision-making processes
 
+## Data Flow Architecture
+
+### Training Pipeline
+```
+Raw Industrial Data → Preprocessing → Quality Assessment → Dataset Creation
+       ↓                  ↓              ↓                    ↓
+   Normalization      Feature Eng    Safety Validation   HDF5 Storage
+       ↓                  ↓              ↓                    ↓
+   Offline RL Agent ← Dataset Loading ← Batch Processing ← MLflow Tracking
+```
+
+### Inference Pipeline  
+```
+Real-time State → Safety Check → Policy Inference → Action Validation → System Output
+       ↓              ↓              ↓                 ↓                 ↓
+   Normalization   Constraint     JAX Forward      Safety Filter    PLC Interface
+       ↓          Verification      Pass             ↓                 ↓
+   Logging ←─────────────────────────────────────── Audit Trail ← Emergency Stop
+```
+
+### Component Interactions
+
+```mermaid
+graph TD
+    A[Industrial Environment] --> B[State Observation]
+    B --> C[Safety Validator]
+    C --> D[RL Agent]
+    D --> E[Action Proposal]
+    E --> F[Constraint Checker]
+    F --> G[Action Execution]
+    G --> A
+    
+    C --> H[Emergency Stop]
+    F --> H
+    H --> I[System Shutdown]
+    
+    D --> J[MLflow Logger]
+    G --> J
+    J --> K[Experiment Tracking]
+    
+    L[Dataset] --> D
+    M[Configuration] --> C
+    M --> F
+```
+
+## Performance Characteristics
+
+### Latency Requirements
+- **Policy Inference**: <10ms for real-time control
+- **Safety Checking**: <1ms for critical constraints
+- **Data Logging**: <100ms for audit compliance
+- **Emergency Response**: <500µs for shutdown procedures
+
+### Throughput Specifications
+- **Concurrent Environments**: 1000+ parallel simulations
+- **Training Throughput**: 1M+ transitions per second
+- **Data Processing**: 10GB/hour continuous ingestion
+- **Model Serving**: 10K+ inferences per second
+
 This architecture ensures both research flexibility and industrial deployment readiness while maintaining the highest safety standards.
