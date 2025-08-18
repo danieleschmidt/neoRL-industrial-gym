@@ -1,0 +1,349 @@
+# Industrial Compliance and Safety Validation Workflow
+# Ensures compliance with industrial standards and safety requirements
+
+name: Industrial Compliance
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/neorl_industrial/safety/**'
+      - 'src/neorl_industrial/environments/**'
+      - 'src/neorl_industrial/agents/**'
+      - 'tests/test_safety_*.py'
+      - 'tests/integration/test_safety_*.py'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/neorl_industrial/safety/**'
+      - 'src/neorl_industrial/environments/**'
+      - 'src/neorl_industrial/agents/**'
+  schedule:
+    # Run compliance checks weekly
+    - cron: '0 2 * * 1'  # Monday 2 AM UTC
+  workflow_dispatch:
+    inputs:
+      compliance_level:
+        description: 'Compliance level to validate'
+        required: false
+        default: 'full'
+        type: choice
+        options:
+          - 'basic'
+          - 'standard' 
+          - 'full'
+          - 'certification'
+
+env:
+  # Industrial environment configuration
+  INDUSTRIAL_MODE: true
+  SAFETY_VALIDATION_LEVEL: strict
+  COMPLIANCE_STANDARDS: "IEC_62443,NIST_CSF,ISO_27001"
+  JAX_PLATFORM_NAME: cpu
+  PYTHONPATH: src
+
+jobs:
+  # IEC 62443 Industrial Security Standard Validation
+  iec-62443-validation:
+    name: IEC 62443 Security Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[test,dev]"
+      
+      - name: IEC 62443 Zone and Conduit Validation
+        run: |
+          echo "🔍 Validating IEC 62443 Zone and Conduit model implementation..."
+          python -m pytest tests/compliance/test_iec_62443.py -v --tb=short
+          
+      - name: Security Level Assessment
+        run: |
+          echo "🛡️ Assessing Security Levels (SL 1-4)..."
+          python scripts/compliance/assess_security_levels.py --standard iec-62443
+          
+      - name: Network Segmentation Validation
+        run: |
+          echo "🌐 Validating network segmentation compliance..."
+          python scripts/compliance/validate_network_segmentation.py
+
+  # NIST Cybersecurity Framework Compliance
+  nist-csf-compliance:
+    name: NIST Cybersecurity Framework
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[test,dev]"
+      
+      - name: NIST CSF Core Functions Assessment
+        run: |
+          echo "🎯 Assessing NIST CSF Core Functions (Identify, Protect, Detect, Respond, Recover)..."
+          python scripts/compliance/nist_csf_assessment.py --functions all
+          
+      - name: Risk Management Validation
+        run: |
+          echo "⚖️ Validating risk management processes..."
+          python -m pytest tests/compliance/test_risk_management.py -v
+
+  # Safety-Critical System Validation
+  safety-critical-validation:
+    name: Safety-Critical Systems Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[test,dev]"
+      
+      - name: Safety Constraint Validation
+        run: |
+          echo "🛡️ Validating safety constraints..."
+          python -m pytest tests/safety/ -v --tb=short --safety-critical
+          
+      - name: Emergency Shutdown Testing
+        run: |
+          echo "🚨 Testing emergency shutdown systems..."
+          python scripts/safety/test_emergency_shutdown.py --comprehensive
+          
+      - name: Fail-Safe Mechanism Testing
+        run: |
+          echo "🔒 Testing fail-safe mechanisms..."
+          python scripts/safety/test_fail_safe.py --all-scenarios
+          
+      - name: Safety Monitoring System Test
+        run: |
+          echo "📊 Testing safety monitoring system..."
+          python -m pytest tests/integration/test_safety_monitoring.py -v
+          
+      - name: Generate Safety Report
+        run: |
+          python scripts/safety/generate_safety_report.py --format pdf --output safety-report.pdf
+          
+      - name: Upload Safety Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: safety-validation-report
+          path: safety-report.pdf
+          retention-days: 30
+
+  # Regulatory Compliance Documentation
+  regulatory-documentation:
+    name: Regulatory Documentation Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Validate Documentation Structure
+        run: |
+          echo "📋 Validating regulatory documentation structure..."
+          python scripts/compliance/validate_documentation.py --standards all
+          
+      - name: Check Audit Trail Completeness
+        run: |
+          echo "🔍 Checking audit trail completeness..."
+          python scripts/compliance/audit_trail_validation.py
+          
+      - name: Generate Compliance Matrix
+        run: |
+          echo "📊 Generating compliance matrix..."
+          python scripts/compliance/generate_compliance_matrix.py --output compliance-matrix.html
+          
+      - name: Upload Compliance Documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: compliance-documentation
+          path: |
+            compliance-matrix.html
+            docs/compliance/
+          retention-days: 90
+
+  # Industrial Environment Testing
+  industrial-environment-testing:
+    name: Industrial Environment Testing
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: 
+          - "ChemicalReactor-v0"
+          - "RobotAssembly-v0"
+          - "HVACControl-v0"
+          - "WaterTreatment-v0"
+          - "SteelAnnealing-v0"
+          - "PowerGrid-v0"
+          - "SupplyChain-v0"
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[test,dev]"
+      
+      - name: Test Industrial Environment - ${{ matrix.environment }}
+        run: |
+          echo "🏭 Testing ${{ matrix.environment }} industrial environment..."
+          python -m pytest tests/industrial/test_${{ matrix.environment }}.py -v --tb=short
+          
+      - name: Safety Validation - ${{ matrix.environment }}
+        run: |
+          echo "🛡️ Safety validation for ${{ matrix.environment }}..."
+          python scripts/industrial/validate_environment_safety.py --env ${{ matrix.environment }}
+          
+      - name: Performance Benchmarking - ${{ matrix.environment }}
+        run: |
+          echo "⚡ Performance benchmarking for ${{ matrix.environment }}..."
+          python scripts/benchmarks/environment_benchmark.py --env ${{ matrix.environment }} --duration 300
+
+  # Data Integrity and Quality Validation
+  data-integrity-validation:
+    name: Data Integrity Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[test,dev]"
+      
+      - name: Dataset Integrity Validation
+        run: |
+          echo "🔍 Validating dataset integrity..."
+          python scripts/data/validate_dataset_integrity.py --comprehensive
+          
+      - name: Data Quality Assessment
+        run: |
+          echo "📊 Assessing data quality metrics..."
+          python scripts/data/assess_data_quality.py --all-environments
+          
+      - name: Privacy and Anonymization Check
+        run: |
+          echo "🔒 Checking data privacy and anonymization..."
+          python scripts/compliance/validate_data_privacy.py
+          
+      - name: Generate Data Quality Report
+        run: |
+          python scripts/data/generate_data_report.py --output data-quality-report.json
+          
+      - name: Upload Data Quality Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: data-quality-report
+          path: data-quality-report.json
+          retention-days: 30
+
+  # Final Compliance Report
+  compliance-report:
+    name: Generate Compliance Report
+    runs-on: ubuntu-latest
+    needs: [iec-62443-validation, nist-csf-compliance, safety-critical-validation, regulatory-documentation, industrial-environment-testing, data-integrity-validation]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: compliance-artifacts/
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[test,dev]"
+          pip install reportlab jinja2  # For PDF generation
+      
+      - name: Generate Comprehensive Compliance Report
+        run: |
+          echo "📋 Generating comprehensive compliance report..."
+          python scripts/compliance/generate_comprehensive_report.py \
+            --input-dir compliance-artifacts/ \
+            --output comprehensive-compliance-report.pdf \
+            --standards "IEC_62443,NIST_CSF,ISO_27001" \
+            --include-recommendations
+      
+      - name: Upload Comprehensive Compliance Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: comprehensive-compliance-report
+          path: comprehensive-compliance-report.pdf
+          retention-days: 365  # Keep for a full year
+      
+      - name: Post Compliance Summary
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = 'compliance-summary.md';
+            
+            if (fs.existsSync(path)) {
+              const summary = fs.readFileSync(path, 'utf8');
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## 🏭 Industrial Compliance Report\n\n${summary}`
+              });
+            }
+
+  # Compliance Status Badge Update
+  update-compliance-badge:
+    name: Update Compliance Status Badge
+    runs-on: ubuntu-latest
+    needs: [compliance-report]
+    if: github.ref == 'refs/heads/main' && success()
+    steps:
+      - name: Update Compliance Badge
+        run: |
+          echo "🏆 Updating compliance status badge..."
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"schemaVersion": 1, "label": "compliance", "message": "passing", "color": "green"}' \
+            "https://img.shields.io/endpoint?url=data:application/json;base64,$(echo '{"schemaVersion": 1, "label": "industrial compliance", "message": "IEC 62443 + NIST CSF", "color": "green"}' | base64 -w 0)"

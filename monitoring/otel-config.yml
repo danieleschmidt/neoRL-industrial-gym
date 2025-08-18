@@ -1,0 +1,313 @@
+# OpenTelemetry Collector configuration for neoRL-industrial-gym
+# Provides comprehensive observability: traces, metrics, and logs
+
+receivers:
+  # OTLP receivers for traces, metrics, and logs
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins:
+            - "http://localhost:*"
+            - "https://localhost:*"
+  
+  # Prometheus metrics scraping
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'neorl-industrial-app'
+          static_configs:
+            - targets: ['neorl-app:8000']
+          scrape_interval: 5s
+          metrics_path: '/metrics'
+          
+        - job_name: 'safety-monitor'
+          static_configs:
+            - targets: ['neorl-app:8001']
+          scrape_interval: 1s  # High frequency for safety monitoring
+          metrics_path: '/safety/metrics'
+  
+  # Host metrics collection
+  hostmetrics:
+    collection_interval: 10s
+    scrapers:
+      cpu:
+        metrics:
+          system.cpu.utilization:
+            enabled: true
+      disk:
+      filesystem:
+      load:
+      memory:
+      network:
+      process:
+        mute_process_name_error: true
+        mute_process_exe_error: true
+        mute_process_io_error: true
+  
+  # Docker stats collection
+  docker_stats:
+    endpoint: unix:///var/run/docker.sock
+    collection_interval: 10s
+    timeout: 5s
+    api_version: 1.24
+    
+  # File log collection
+  filelog:
+    include:
+      - /var/log/neorl-industrial/*.log
+      - /var/log/neorl-industrial/safety/*.log
+    exclude:
+      - /var/log/neorl-industrial/*.gz
+    start_at: end
+    operators:
+      - type: json_parser
+        id: json_parser
+        timestamp:
+          parse_from: attributes.timestamp
+          layout: '%Y-%m-%dT%H:%M:%S.%fZ'
+      - type: severity_parser
+        id: severity_parser
+        parse_from: attributes.level
+        mapping:
+          debug: debug
+          info: info
+          warn: warn
+          error: error
+          fatal: fatal
+          critical: fatal
+      - type: add
+        field: attributes.service_name
+        value: neorl-industrial
+
+processors:
+  # Batch processor for performance
+  batch:
+    send_batch_size: 8192
+    timeout: 200ms
+    send_batch_max_size: 65536
+    
+  # Memory limiter to prevent OOM
+  memory_limiter:
+    limit_mib: 512
+    spike_limit_mib: 128
+    
+  # Resource processor to add common attributes
+  resource:
+    attributes:
+      - key: service.name
+        value: neorl-industrial-gym
+        action: upsert
+      - key: service.version
+        from_attribute: version
+        action: upsert
+      - key: deployment.environment
+        from_attribute: environment
+        action: upsert
+      - key: service.namespace
+        value: industrial-ai
+        action: upsert
+        
+  # Probabilistic sampling for high-volume traces
+  probabilistic_sampler:
+    sampling_percentage: 10.0  # Sample 10% of traces
+    hash_seed: 22
+    
+  # Span processor for trace enhancement
+  span:
+    name:
+      to_attributes:
+        rules:
+          - pattern: ^(.*)\/(.*)$
+            name_extractor: $$1
+            attributes:
+              component: $$2
+    
+  # Tail sampling for intelligent trace selection
+  tail_sampling:
+    policies:
+      # Always sample safety-critical traces
+      - name: safety_critical
+        type: string_attribute
+        string_attribute:
+          key: safety.critical
+          values:
+            - "true"
+        spans_per_second: -1  # No limit for safety traces
+      
+      # Sample error traces at high rate
+      - name: errors
+        type: status_code
+        status_code:
+          status_codes:
+            - ERROR
+        spans_per_second: 100
+      
+      # Sample latency outliers
+      - name: latency_outliers
+        type: latency
+        latency:
+          threshold_ms: 100  # Sample traces >100ms
+        spans_per_second: 50
+      
+      # Random sampling for baseline
+      - name: random
+        type: probabilistic
+        probabilistic:
+          sampling_percentage: 1.0
+          
+  # Attribute processor for sensitive data removal
+  attributes:
+    actions:
+      # Remove sensitive data
+      - key: user.password
+        action: delete
+      - key: auth.token
+        action: delete
+      - key: api.key
+        action: delete
+      - key: database.password
+        action: delete
+      # Redact IP addresses for privacy
+      - key: client.ip
+        action: hash
+      # Add industrial context
+      - key: industrial.environment
+        value: simulation
+        action: upsert
+
+exporters:
+  # Prometheus metrics export
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    const_labels:
+      service: neorl-industrial
+    send_timestamps: true
+    metric_expiration: 180s
+    enable_open_metrics: true
+    
+  # Jaeger traces export
+  jaeger:
+    endpoint: jaeger:14250
+    tls:
+      insecure: true
+    sending_queue:
+      num_consumers: 10
+      queue_size: 1000
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+      
+  # OTLP export for external observability platforms
+  otlp/external:
+    endpoint: "${OTLP_ENDPOINT}"  # Set via environment variable
+    headers:
+      "api-key": "${OTLP_API_KEY}"
+    compression: gzip
+    timeout: 10s
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+  
+  # Logging export to external systems
+  logging:
+    loglevel: debug
+    sampling_initial: 5
+    sampling_thereafter: 200
+    
+  # File export for local debugging
+  file:
+    path: /tmp/otel-collector-export.json
+    rotation:
+      max_megabytes: 100
+      max_days: 3
+      max_backups: 5
+      
+  # Elasticsearch for log aggregation
+  elasticsearch:
+    endpoints:
+      - "http://elasticsearch:9200"
+    index: "neorl-industrial-logs"
+    pipeline: "neorl-pipeline"
+    timeout: 10s
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+
+extensions:
+  # Health check extension
+  health_check:
+    endpoint: 0.0.0.0:13133
+    
+  # Performance profiling
+  pprof:
+    endpoint: 0.0.0.0:1777
+    
+  # Zpages for internal debugging
+  zpages:
+    endpoint: 0.0.0.0:55679
+
+# Service configuration
+service:
+  extensions: [health_check, pprof, zpages]
+  
+  pipelines:
+    # Traces pipeline
+    traces:
+      receivers: [otlp, jaeger]
+      processors: 
+        - memory_limiter
+        - resource
+        - probabilistic_sampler
+        - span
+        - tail_sampling
+        - attributes
+        - batch
+      exporters: [jaeger, otlp/external, logging]
+    
+    # Metrics pipeline  
+    metrics:
+      receivers: [otlp, prometheus, hostmetrics, docker_stats]
+      processors:
+        - memory_limiter
+        - resource
+        - attributes
+        - batch
+      exporters: [prometheus, otlp/external]
+    
+    # Logs pipeline
+    logs:
+      receivers: [otlp, filelog]
+      processors:
+        - memory_limiter
+        - resource
+        - attributes
+        - batch
+      exporters: [elasticsearch, otlp/external, logging]
+  
+  # Telemetry configuration
+  telemetry:
+    logs:
+      level: info
+      development: false
+      sampling:
+        enabled: true
+        tick: 10s
+        initial: 5
+        thereafter: 200
+    metrics:
+      level: detailed
+      address: 0.0.0.0:8888
+      
+# Feature gates for experimental features
+feature_gates:
+  - "telemetry.useOtelForInternalMetrics"  # Use OTEL for internal metrics
