@@ -9,6 +9,41 @@ import flax.linen as nn
 from flax.training import train_state
 
 
+def create_critic_network(
+    state_dim: int,
+    action_dim: int,
+    hidden_dims: Sequence[int] = (256, 256),
+    activation: Callable = nn.relu,
+    use_layer_norm: bool = False,
+    dropout_rate: float = 0.0,
+):
+    """Create a critic network."""
+    return Critic(
+        hidden_dims=hidden_dims,
+        activation=activation,
+        use_layer_norm=use_layer_norm,
+        dropout_rate=dropout_rate,
+    )
+
+
+def create_actor_network(
+    state_dim: int,
+    action_dim: int,
+    hidden_dims: Sequence[int] = (256, 256),
+    activation: Callable = nn.relu,
+    use_layer_norm: bool = False,
+    dropout_rate: float = 0.0,
+):
+    """Create an actor network."""
+    return Actor(
+        action_dim=action_dim,
+        hidden_dims=hidden_dims,
+        activation=activation,
+        use_layer_norm=use_layer_norm,
+        dropout_rate=dropout_rate,
+    )
+
+
 class MLP(nn.Module):
     """Multi-layer perceptron with configurable architecture."""
     

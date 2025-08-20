@@ -1,7 +1,7 @@
 """Quality metrics and thresholds for progressive quality monitoring."""
 
 from dataclasses import dataclass, field
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import math
 
 
