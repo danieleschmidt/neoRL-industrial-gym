@@ -75,3 +75,8 @@ class ValidationError(NeoRLIndustrialException):
     def __init__(self, message: str, validation_type: str = None):
         super().__init__(message)
         self.validation_type = validation_type
+
+
+class RecoveryError(NeoRLIndustrialException):
+    """Raised when error recovery fails."""
+    pass

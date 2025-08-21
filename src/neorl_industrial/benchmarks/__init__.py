@@ -26,8 +26,7 @@ from .baseline_agents import (
     BaselineAgentFactory,
     RandomAgent,
     PIDControllerAgent,
-    MPC_Agent,
-    create_all_baselines
+    MPC_Agent
 )
 
 __all__ = [
