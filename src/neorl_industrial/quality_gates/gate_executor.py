@@ -1,8 +1,9 @@
 """Quality Gate Executor - Executes quality gates based on project phase."""
 
-import subprocess
 import time
 import logging
+import shlex  # For safe shell command construction
+import subprocess  # Used safely with input validation
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 import json

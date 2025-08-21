@@ -17,7 +17,8 @@ except ImportError:
 
 from ..monitoring.logger import get_logger
 from ..core.types import Array
-from ..validation import ValidationResult, validate_hyperparameters
+from ..validation.input_validator import ValidationResult
+from .. import validation
 
 
 @dataclass

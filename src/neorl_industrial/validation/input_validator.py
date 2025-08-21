@@ -491,39 +491,23 @@ class ComprehensiveValidator:
             return result
         else:
             return ValidationResult(True, [], [], [])
-            
-    def validate_dataset(self, dataset: Dict[str, Array]) -> ValidationResult:
-        """Validate training dataset."""
-        result = self.dataset_validator.validate(dataset)
+
+
+def validate_array_input(array: Array, name: str = "array") -> Array:
+    """Validate array input with basic checks."""
+    if array is None:
+        raise ValueError(f"{name} cannot be None")
         
-        if not result.is_valid:
-            self.logger.error(f"Dataset validation failed: {result.errors}")
+    if not isinstance(array, (np.ndarray, jnp.ndarray)):
+        try:
+            array = np.array(array)
+        except Exception as e:
+            raise ValueError(f"Cannot convert {name} to array: {e}")
             
-        if result.warnings:
-            self.logger.warning(f"Dataset quality warnings: {result.warnings}")
-            
-        return result
+    if array.size == 0:
+        raise ValueError(f"{name} cannot be empty")
         
-    def enable_strict_mode(self):
-        """Enable strict validation mode (no auto-correction)."""
-        self.strict_mode = True
-        self.logger.info("Strict validation mode enabled")
+    if not np.isfinite(array).all():
+        raise ValueError(f"{name} contains non-finite values")
         
-    def get_validation_report(self) -> Dict[str, Any]:
-        """Get comprehensive validation statistics."""
-        return {
-            "validators": {
-                "state_validator": {
-                    "rules": len(self.state_validator.rules),
-                    "state_dim": self.state_validator.state_dim
-                },
-                "action_validator": {
-                    "rules": len(self.action_validator.rules),
-                    "action_dim": self.action_validator.action_dim
-                },
-                "safety_validator": {
-                    "enabled": self.safety_validator is not None,
-                    "constraints": len(self.safety_validator.safety_constraints) if self.safety_validator else 0
-                }
-            }
-        }
+    return array

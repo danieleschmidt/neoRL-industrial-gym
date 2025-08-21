@@ -284,7 +284,7 @@ class OfflineAgent(abc.ABC):
                     self.logger.log_evaluation_results(
                         results=eval_results,
                         agent_id=self.__class__.__name__,
-                        env_id=getattr(eval_env, '__class__', {}).get('__name__', 'Unknown')
+                        env_id=getattr(eval_env.__class__, '__name__', 'Unknown')
                     )
                 finally:
                     # Restore original training state

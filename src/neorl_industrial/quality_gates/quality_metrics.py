@@ -140,7 +140,7 @@ class QualityMetrics:
         
         # Extract metrics from gate results
         if "Unit Tests" in gate_results:
-            test_result = gate_results["Unit Tests"]
+            test_result = gate_results["Unit Tests"].details
             if "tests_passed" in test_result and "tests_failed" in test_result:
                 total_tests = test_result["tests_passed"] + test_result["tests_failed"]
                 if total_tests > 0:
@@ -150,7 +150,7 @@ class QualityMetrics:
                 metrics.code_coverage = test_result.get("coverage_percent", 0.0)
                 
         if "Security Scan" in gate_results:
-            security_result = gate_results["Security Scan"]
+            security_result = gate_results["Security Scan"].details
             metrics.high_severity_vulnerabilities = security_result.get("high_severity_issues", 0)
             metrics.vulnerability_count = security_result.get("total_issues", 0)
             
@@ -161,7 +161,7 @@ class QualityMetrics:
                 metrics.security_score = max(30, 70 - metrics.high_severity_vulnerabilities * 15)
                 
         if "Performance Tests" in gate_results:
-            perf_result = gate_results["Performance Tests"]
+            perf_result = gate_results["Performance Tests"].details
             perf_metrics = perf_result.get("performance_metrics", {})
             
             if "steps_per_second" in perf_metrics:
@@ -173,7 +173,7 @@ class QualityMetrics:
                 metrics.memory_usage_mb = perf_metrics["memory_mb"]
                 
         if "Documentation Check" in gate_results:
-            doc_result = gate_results["Documentation Check"]
+            doc_result = gate_results["Documentation Check"].details
             metrics.documentation_coverage = doc_result.get("docstring_coverage_percent", 0.0)
             metrics.api_documentation_complete = len(doc_result.get("missing_docs", [])) == 0
             
@@ -184,7 +184,7 @@ class QualityMetrics:
                 metrics.readme_quality_score = (present_docs / total_expected) * 100
                 
         if "Code Style" in gate_results:
-            style_result = gate_results["Code Style"]
+            style_result = gate_results["Code Style"].details
             issues = style_result.get("ruff_issues", 0)
             # Convert issues to quality score
             if issues == 0:
@@ -197,7 +197,7 @@ class QualityMetrics:
             
         # Set build success rate based on overall gate success
         passed_gates = sum(1 for result in gate_results.values() 
-                          if result.get("status") == "passed")
+                          if result.status == "passed")
         total_gates = len(gate_results)
         if total_gates > 0:
             metrics.build_success_rate = (passed_gates / total_gates) * 100
