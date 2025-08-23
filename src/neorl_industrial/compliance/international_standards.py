@@ -691,7 +691,10 @@ class InternationalComplianceManager:
                 total_count = len(standard_results)
                 compliance_rate = compliant_count / total_count if total_count > 0 else 0
                 
-                self.logger.info(f"{standard.value}: {compliant_count}/{total_count} requirements compliant ({compliance_rate:.1%})")
+                self.logger.info(
+                    f"{standard.value}: {compliant_count}/{total_count} requirements "
+                    f"compliant ({compliance_rate:.1%})"
+                )
                 
             except Exception as e:
                 self.logger.error(f"Failed to assess compliance for {standard.value}: {e}")
@@ -699,7 +702,10 @@ class InternationalComplianceManager:
                 
         return results
         
-    def generate_compliance_report(self, assessment_results: Dict[InternationalStandard, List[ComplianceResult]]) -> Dict[str, Any]:
+    def generate_compliance_report(
+        self, 
+        assessment_results: Dict[InternationalStandard, List[ComplianceResult]]
+    ) -> Dict[str, Any]:
         """Generate comprehensive compliance report."""
         
         report = {

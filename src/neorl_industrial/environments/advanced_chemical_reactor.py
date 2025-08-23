@@ -145,7 +145,10 @@ class AdvancedChemicalReactorEnv(IndustrialEnv):
         
         self.action_space = spaces.Box(
             low=jnp.array([0.0, 0.0, 0.0, self.temp_range[0], 0.0, 0.0]),
-            high=jnp.array([self.flow_range[1], self.flow_range[1], 3000.0, self.temp_range[1], 100.0, 1.0]),
+            high=jnp.array([
+                self.flow_range[1], self.flow_range[1], 3000.0,
+                self.temp_range[1], 100.0, 1.0
+            ]),
             dtype=jnp.float32
         )
         
@@ -453,7 +456,10 @@ class AdvancedChemicalReactorEnv(IndustrialEnv):
             print(f"=== Chemical Reactor State ===")
             print(f"Temperature: {self.state[0]:.1f} K ({self.state[0]-273.15:.1f}°C)")
             print(f"Pressure: {self.state[2]:.0f} Pa ({self.state[2]/1e5:.1f} bar)")
-            print(f"Concentrations: A={self.state[3]:.2f}, B={self.state[4]:.2f}, C={self.state[5]:.2f}, D={self.state[6]:.2f} mol/L")
+            print(
+                f"Concentrations: A={self.state[3]:.2f}, B={self.state[4]:.2f}, "
+                f"C={self.state[5]:.2f}, D={self.state[6]:.2f} mol/L"
+            )
             print(f"Conversion: {self.state[17]:.1%}")
             print(f"Safety margins: T={self.state[18]:.1f}%, P={self.state[19]:.1f}%")
             print("=" * 30)
