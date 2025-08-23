@@ -503,7 +503,8 @@ class AdvancedPowerGridEnv(IndustrialEnv):
     def get_safety_metrics(self) -> SafetyMetrics:
         """Get current safety metrics for the power system."""
         
-        system_frequency = jnp.sum(self.state[16:20] * self.generator_params['inertia']) / jnp.sum(self.generator_params['inertia'])
+        system_frequency = (jnp.sum(self.state[16:20] * self.generator_params['inertia']) / 
+                            jnp.sum(self.generator_params['inertia']))
         voltages = self.state[0:8]
         
         violations = []
