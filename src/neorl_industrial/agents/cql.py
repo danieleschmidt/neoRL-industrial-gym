@@ -7,7 +7,13 @@ from typing import Any, Dict, Tuple, Optional
 from functools import partial
 
 from .base import OfflineAgent
-from .networks import Actor, DoubleCritic, SafetyCritic, create_train_state, update_target_network
+from .networks import (
+    Actor, 
+    DoubleCritic, 
+    SafetyCritic, 
+    create_train_state, 
+    update_target_network
+)
 from ..core.types import Array, StateArray, ActionArray
 
 

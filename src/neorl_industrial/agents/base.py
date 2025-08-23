@@ -44,8 +44,14 @@ class OfflineAgent(abc.ABC):
             raise ValueError(f"action_dim must be positive integer, got {action_dim}")
         if not isinstance(safety_critic, bool):
             raise TypeError(f"safety_critic must be bool, got {type(safety_critic)}")
-        if not isinstance(constraint_threshold, (int, float)) or constraint_threshold <= 0:
-            raise ValueError(f"constraint_threshold must be positive number, got {constraint_threshold}")
+        if (
+            not isinstance(constraint_threshold, (int, float)) 
+            or constraint_threshold <= 0
+        ):
+            raise ValueError(
+                f"constraint_threshold must be positive number, "
+                f"got {constraint_threshold}"
+            )
         if not isinstance(seed, int):
             raise TypeError(f"seed must be int, got {type(seed)}")
             

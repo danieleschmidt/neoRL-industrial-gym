@@ -608,7 +608,10 @@ class IndustrialBenchmarkSuite:
         if seeds is None:
             seeds = list(range(self.config.n_seeds))
             
-        self.logger.info(f"Running full benchmark suite: {len(agents)} agents x {len(environments)} environments x {len(self.benchmarks)} benchmarks")
+        self.logger.info(
+            f"Running full benchmark suite: {len(agents)} agents x "
+            f"{len(environments)} environments x {len(self.benchmarks)} benchmarks"
+        )
         
         all_results = {}
         
@@ -733,15 +736,17 @@ class IndustrialBenchmarkSuite:
             for result in agent_results:
                 ci_str = f"[{result.confidence_interval[0]:.2f}, {result.confidence_interval[1]:.2f}]"
                 report_lines.append(
-                    f"| {agent_name} | {result.environment_name} | {result.benchmark_name} | "
-                    f"{result.mean_return:.2f} | {result.std_return:.2f} | {result.safety_score:.1f} | {ci_str} |"
+                    f"| {agent_name} | {result.environment_name} | "
+                    f"{result.benchmark_name} | {result.mean_return:.2f} | "
+                    f"{result.std_return:.2f} | {result.safety_score:.1f} | {ci_str} |"
                 )
                 
         report_lines.extend([
             "",
             "## Statistical Analysis",
             "",
-            "*Note: Statistical significance testing between agents can be performed using the provided StatisticalValidator.*",
+            "*Note: Statistical significance testing between agents can be "
+            "performed using the provided StatisticalValidator.*",
             "",
             "## Reproducibility Information",
             "",

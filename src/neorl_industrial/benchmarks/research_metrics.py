@@ -135,7 +135,11 @@ Algorithm & Mean Return & Std Return & Safety Rate & Sample Efficiency \\
         
         rows = []
         for alg_name, metrics in results.items():
-            row = f"{alg_name} & {metrics.mean_return:.2f} & {metrics.std_return:.2f} & {metrics.constraint_satisfaction:.3f} & {metrics.sample_efficiency:.0f} \\\\"
+            row = (
+                f"{alg_name} & {metrics.mean_return:.2f} & "
+                f"{metrics.std_return:.2f} & {metrics.constraint_satisfaction:.3f} & "
+                f"{metrics.sample_efficiency:.0f} \\\\"
+            )
             rows.append(row)
             
         footer = r"""
@@ -155,7 +159,11 @@ Algorithm & Mean Return & Std Return & Safety Rate & Sample Efficiency \\
         
         rows = []
         for alg_name, metrics in results.items():
-            row = f"| {alg_name} | {metrics.mean_return:.2f} | {metrics.std_return:.2f} | {metrics.constraint_satisfaction:.3f} | {metrics.sample_efficiency:.0f} |"
+            row = (
+                f"| {alg_name} | {metrics.mean_return:.2f} | "
+                f"{metrics.std_return:.2f} | {metrics.constraint_satisfaction:.3f} | "
+                f"{metrics.sample_efficiency:.0f} |"
+            )
             rows.append(row)
             
         return header + "\n".join(rows)
@@ -192,7 +200,10 @@ Algorithm & Mean Return & Std Return & Safety Rate & Sample Efficiency \\
             "efficiency_comparison": {
                 "baseline_efficiency": baseline.sample_efficiency,
                 "treatment_efficiency": treatment.sample_efficiency,
-                "efficiency_ratio": treatment.sample_efficiency / baseline.sample_efficiency if baseline.sample_efficiency > 0 else float('inf')
+                "efficiency_ratio": (
+                    treatment.sample_efficiency / baseline.sample_efficiency 
+                    if baseline.sample_efficiency > 0 else float('inf')
+                )
             }
         }
         
@@ -226,10 +237,14 @@ ABSTRACT TEMPLATE
 {experiment_description}
 
 We evaluate {len(results)} algorithms on industrial control benchmarks. 
-Our proposed method ({best_name}) achieves a mean return of {best_metrics.mean_return:.2f} ± {best_metrics.std_return:.2f}, 
-representing a {((best_metrics.mean_return - min([m.mean_return for m in results.values()])) / min([m.mean_return for m in results.values()]) * 100):.1f}% improvement 
-over the baseline. The method maintains {best_metrics.constraint_satisfaction:.1%} safety constraint satisfaction 
-with {best_metrics.sample_efficiency:.0f} sample efficiency. Statistical significance is confirmed 
+Our proposed method ({best_name}) achieves a mean return of "
+        f"{best_metrics.mean_return:.2f} ± {best_metrics.std_return:.2f}, "
+        "representing a "
+        f"{((best_metrics.mean_return - min([m.mean_return for m in results.values()])) / min([m.mean_return for m in results.values()]) * 100):.1f}% improvement "
+        "over the baseline. The method maintains "
+        f"{best_metrics.constraint_satisfaction:.1%} safety constraint satisfaction "
+        f"with {best_metrics.sample_efficiency:.0f} sample efficiency. "
+        "Statistical significance is confirmed 
 with effect size {best_metrics.effect_size:.3f}.
 
 KEYWORDS: Industrial Reinforcement Learning, Safety-Critical Control, Offline Learning
