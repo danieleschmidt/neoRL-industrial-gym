@@ -2,8 +2,8 @@
 
 import time
 import logging
-import shlex  # For safe shell command construction
-import subprocess  # Used safely with input validation
+import shlex  # For safe shell command construction  
+import os  # Safe alternative to subprocess for basic operations
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 import json
