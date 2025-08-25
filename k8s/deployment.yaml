@@ -1,0 +1,381 @@
+# Kubernetes deployment for neoRL Industrial
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: neorl-industrial
+  labels:
+    name: neorl-industrial
+    environment: production
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: neorl-config
+  namespace: neorl-industrial
+data:
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+  METRICS_ENABLED: "true"
+  SECURITY_MONITORING: "true"
+  CIRCUIT_BREAKERS_ENABLED: "true"
+  QUANTUM_ACCELERATION: "true"
+  DISTRIBUTED_TRAINING: "true"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: neorl-secrets
+  namespace: neorl-industrial
+type: Opaque
+data:
+  # Base64 encoded secrets - replace with actual values
+  REDIS_PASSWORD: eW91ci1yZWRpcy1wYXNzd29yZA==
+  GRAFANA_SECRET_KEY: eW91ci1zZWNyZXQta2V5
+  JWT_SECRET: eW91ci1qd3Qtc2VjcmV0
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neorl-industrial
+  namespace: neorl-industrial
+  labels:
+    app: neorl-industrial
+    version: v1
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: neorl-industrial
+  template:
+    metadata:
+      labels:
+        app: neorl-industrial
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8081"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: neorl-industrial
+        image: neorl-industrial:latest
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        - containerPort: 8081
+          name: metrics
+          protocol: TCP
+        envFrom:
+        - configMapRef:
+            name: neorl-config
+        - secretRef:
+            name: neorl-secrets
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: data-volume
+          mountPath: /app/data
+          readOnly: true
+        - name: logs-volume
+          mountPath: /app/logs
+        - name: checkpoints-volume
+          mountPath: /app/checkpoints
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: neorl-data-pvc
+      - name: logs-volume
+        persistentVolumeClaim:
+          claimName: neorl-logs-pvc
+      - name: checkpoints-volume
+        persistentVolumeClaim:
+          claimName: neorl-checkpoints-pvc
+      securityContext:
+        fsGroup: 1000
+      serviceAccountName: neorl-service-account
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: neorl-industrial-service
+  namespace: neorl-industrial
+  labels:
+    app: neorl-industrial
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  - port: 8081
+    targetPort: 8081
+    protocol: TCP
+    name: metrics
+  selector:
+    app: neorl-industrial
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: neorl-industrial-headless
+  namespace: neorl-industrial
+  labels:
+    app: neorl-industrial
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: neorl-industrial
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: neorl-industrial-ingress
+  namespace: neorl-industrial
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-rpm: "6000"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  tls:
+  - hosts:
+    - neorl.industrial.local
+    secretName: neorl-tls-secret
+  rules:
+  - host: neorl.industrial.local
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: neorl-industrial-service
+            port:
+              number: 80
+      - path: /health
+        pathType: Exact
+        backend:
+          service:
+            name: neorl-industrial-service
+            port:
+              number: 80
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: neorl-data-pvc
+  namespace: neorl-industrial
+spec:
+  accessModes:
+    - ReadOnlyMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: fast-ssd
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: neorl-logs-pvc
+  namespace: neorl-industrial
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: neorl-checkpoints-pvc
+  namespace: neorl-industrial
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: fast-ssd
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: neorl-service-account
+  namespace: neorl-industrial
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: neorl-industrial
+  name: neorl-role
+rules:
+- apiGroups: [""]
+  resources: ["pods", "configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: neorl-role-binding
+  namespace: neorl-industrial
+subjects:
+- kind: ServiceAccount
+  name: neorl-service-account
+  namespace: neorl-industrial
+roleRef:
+  kind: Role
+  name: neorl-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: neorl-industrial-hpa
+  namespace: neorl-industrial
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: neorl-industrial
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: neorl-industrial-pdb
+  namespace: neorl-industrial
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: neorl-industrial
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: neorl-network-policy
+  namespace: neorl-industrial
+spec:
+  podSelector:
+    matchLabels:
+      app: neorl-industrial
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 8080
+    - protocol: TCP
+      port: 8081
+  egress:
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+  - to:
+    - podSelector:
+        matchLabels:
+          app: redis
+    ports:
+    - protocol: TCP
+      port: 6379
