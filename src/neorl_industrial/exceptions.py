@@ -80,3 +80,12 @@ class ValidationError(NeoRLIndustrialException):
 class RecoveryError(NeoRLIndustrialException):
     """Raised when error recovery fails."""
     pass
+
+
+class SecurityError(NeoRLIndustrialException):
+    """Raised when security violations occur."""
+    
+    def __init__(self, message: str, threat_level: str = None, event_type: str = None):
+        super().__init__(message)
+        self.threat_level = threat_level
+        self.event_type = event_type
