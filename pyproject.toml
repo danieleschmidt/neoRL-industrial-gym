@@ -1,166 +1,26 @@
 [build-system]
-requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
-build-backend = "setuptools.build_meta"
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
 
 [project]
-name = "neorl-industrial-gym"
-description = "First industrial-grade Offline RL benchmark & library built on NeoRL-2 plus real factory traces"
+name = "neorl-gym"
+version = "0.2.0"
+description = "Offline RL environments for industrial control — learn from pre-collected data"
 readme = "README.md"
-license = {text = "MIT"}
-authors = [
-    {name = "Daniel Schmidt", email = "daniel@terragon.ai"},
-]
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
-]
-requires-python = ">=3.8"
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
 dependencies = [
-    "jax>=0.4.0",
-    "jaxlib>=0.4.0",
-    "numpy>=1.21.0",
-    "gym>=0.21.0",
-    "gymnasium>=0.28.0",
-    "mlflow>=2.0.0",
-    "optree>=0.9.0",
-    "pyyaml>=6.0",
-    "matplotlib>=3.5.0",
-    "seaborn>=0.11.0",
-    "tqdm>=4.64.0",
-    "h5py>=3.7.0",
+    "numpy>=1.24",
+    "torch>=2.0",
 ]
-dynamic = ["version"]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0.0",
-    "pytest-cov>=4.0.0",
-    "black>=22.0.0",
-    "isort>=5.10.0",
-    "flake8>=5.0.0",
-    "mypy>=0.991",
-    "pre-commit>=2.20.0",
+    "pytest>=7",
 ]
-test = [
-    "pytest>=7.0.0",
-    "pytest-cov>=4.0.0",
-    "pytest-xdist>=2.5.0",
-]
-docs = [
-    "sphinx>=5.0.0",
-    "sphinx-rtd-theme>=1.0.0",
-    "myst-parser>=0.18.0",
-]
-
-[project.urls]
-Homepage = "https://github.com/terragon-labs/neoRL-industrial-gym"
-Repository = "https://github.com/terragon-labs/neoRL-industrial-gym"
-Documentation = "https://neorl-industrial.readthedocs.io"
-bug-tracker = "https://github.com/terragon-labs/neoRL-industrial-gym/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
-[tool.setuptools_scm]
-write_to = "src/neorl_industrial/_version.py"
-
-[tool.black]
-line-length = 88
-target-version = ['py38']
-
-[tool.isort]
-profile = "black"
-line_length = 88
-
-[tool.mypy]
-python_version = "3.8"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-python_files = ["test_*.py", "*_test.py"]
-addopts = "--cov=neorl_industrial --cov-report=html --cov-report=term-missing"
-
-[tool.coverage.run]
-source = ["src/neorl_industrial"]
-omit = ["*/tests/*", "*/test_*"]
-
-[tool.ruff]
-target-version = "py38"
-line-length = 88
-select = [
-    "E",   # pycodestyle errors
-    "W",   # pycodestyle warnings
-    "F",   # pyflakes
-    "I",   # isort
-    "N",   # pep8-naming
-    "D",   # pydocstyle
-    "UP",  # pyupgrade
-    "YTT", # flake8-2020
-    "S",   # flake8-bandit
-    "BLE", # flake8-blind-except
-    "B",   # flake8-bugbear
-    "A",   # flake8-builtins
-    "COM", # flake8-commas
-    "C4",  # flake8-comprehensions
-    "T10", # flake8-debugger
-    "EM",  # flake8-errmsg
-    "FA",  # flake8-future-annotations
-    "ISC", # flake8-implicit-str-concat
-    "ICN", # flake8-import-conventions
-    "PIE", # flake8-pie
-    "T20", # flake8-print
-    "PT",  # flake8-pytest-style
-    "Q",   # flake8-quotes
-    "RSE", # flake8-raise
-    "RET", # flake8-return
-    "SLF", # flake8-self
-    "SIM", # flake8-simplify
-    "TID", # flake8-tidy-imports
-    "TCH", # flake8-type-checking
-    "ARG", # flake8-unused-arguments
-    "PTH", # flake8-use-pathlib
-    "ERA", # eradicate
-    "PD",  # pandas-vet
-    "PGH", # pygrep-hooks
-    "PL",  # pylint
-    "TRY", # tryceratops
-    "NPY", # numpy
-    "RUF", # ruff-specific rules
-]
-ignore = [
-    "D100", # Missing docstring in public module
-    "D104", # Missing docstring in public package
-    "D105", # Missing docstring in magic method
-    "D107", # Missing docstring in __init__
-    "S101", # Use of assert detected (common in tests)
-    "PLR0913", # Too many arguments
-    "COM812", # Missing trailing comma (conflicts with formatter)
-    "ISC001", # Implicit string concatenation (conflicts with formatter)
-]
-
-[tool.ruff.pydocstyle]
-convention = "google"
-
-[tool.ruff.per-file-ignores]
-"tests/**/*.py" = [
-    "S101", # asserts allowed in tests
-    "ARG", # Unused function args
-    "PLR2004", # Magic value used in comparison
-    "S106", # Possible hardcoded password (test fixtures)
-]
-"scripts/**/*.py" = [
-    "T201", # print statements allowed in scripts
-    "S602", # subprocess shell execution (controlled use in scripts)
-]
-
-[tool.ruff.flake8-type-checking]
-runtime-evaluated-base-classes = ["pydantic.BaseModel"]
